@@ -2,6 +2,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+
 import {
   Search,
   ShoppingCart,
@@ -19,7 +21,7 @@ import {
   Receipt,
 } from "lucide-react";
 
-import { medicines } from "@/data/inventory";
+import { usePharmacy } from "@/context/PharmacyContext";
 
 const formatMoney = (amount) =>
   new Intl.NumberFormat("en-TZ", {
@@ -28,6 +30,7 @@ const formatMoney = (amount) =>
     maximumFractionDigits: 0,
   }).format(amount || 0);
 
+// Calculate the total stock across all batches.
 const getStock = (medicine) =>
   (medicine.batches || []).reduce(
     (total, batch) => total + Number(batch.quantity || 0),
@@ -35,6 +38,13 @@ const getStock = (medicine) =>
   );
 
 export default function SalesPageContent() {
+  // Get shared medicines and transaction functions.
+  const {
+    medicines,
+    loaded,
+    completeSale,
+  } = usePharmacy();
+
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [cart, setCart] = useState([]);
@@ -44,13 +54,16 @@ export default function SalesPageContent() {
   const [completedSale, setCompletedSale] = useState(null);
   const [notification, setNotification] = useState("");
 
-  // Get unique medicine categories.
+  // Get unique categories from the shared medicine records.
   const categories = useMemo(() => {
-    const unique = [...new Set(medicines.map((medicine) => medicine.category))];
-    return ["All", ...unique];
-  }, []);
+    const unique = [
+      ...new Set(medicines.map((medicine) => medicine.category)),
+    ];
 
-  // Filter medicines using search and category.
+    return ["All", ...unique];
+  }, [medicines]);
+
+  // Search and filter available medicines.
   const filteredMedicines = useMemo(() => {
     return medicines.filter((medicine) => {
       const searchValue = search.toLowerCase();
@@ -66,19 +79,21 @@ export default function SalesPageContent() {
 
       return matchesSearch && matchesCategory;
     });
-  }, [search, selectedCategory]);
+  }, [medicines, search, selectedCategory]);
 
-  // Calculate the cart subtotal.
+  // Calculate cart totals.
   const subtotal = cart.reduce(
-    (total, item) => total + item.sellingPrice * item.quantity,
+    (total, item) =>
+      total + Number(item.sellingPrice) * item.quantity,
     0
   );
 
-  // Calculate discount and final amount.
-  const discountAmount = subtotal * (Math.min(100, Math.max(0, discount)) / 100);
+  const discountAmount =
+    subtotal * (Math.min(100, Math.max(0, discount)) / 100);
+
   const total = subtotal - discountAmount;
 
-  // Add a medicine to the cart.
+  // Add medicine to the cart.
   const addToCart = (medicine) => {
     const availableStock = getStock(medicine);
 
@@ -87,11 +102,15 @@ export default function SalesPageContent() {
       return;
     }
 
-    const existingItem = cart.find((item) => item.id === medicine.id);
+    const existingItem = cart.find(
+      (item) => item.id === medicine.id
+    );
 
     if (existingItem) {
       if (existingItem.quantity >= availableStock) {
-        setNotification("You cannot add more than the available stock.");
+        setNotification(
+          "You cannot add more than the available stock."
+        );
         return;
       }
 
@@ -112,14 +131,19 @@ export default function SalesPageContent() {
     setNotification("");
   };
 
-  // Increase or decrease cart quantity.
+  // Increase or decrease a cart item's quantity.
   const updateQuantity = (medicineId, change) => {
+    const medicine = medicines.find(
+      (item) => item.id === medicineId
+    );
+
+    const availableStock = medicine ? getStock(medicine) : 0;
+
     setCart((previousCart) =>
       previousCart
         .map((item) => {
           if (item.id !== medicineId) return item;
 
-          const availableStock = getStock(item);
           const newQuantity = item.quantity + change;
 
           if (newQuantity > availableStock) {
@@ -131,41 +155,64 @@ export default function SalesPageContent() {
         })
         .filter((item) => item.quantity > 0)
     );
+
+    if (change < 0) {
+      setNotification("");
+    }
   };
 
-  // Remove an item completely.
+  // Remove an item from the cart.
   const removeFromCart = (medicineId) => {
     setCart((previousCart) =>
       previousCart.filter((item) => item.id !== medicineId)
     );
+
+    setNotification("");
   };
 
-  // Simulate checkout.
+  // Process the sale and update shared inventory.
   const handleCheckout = () => {
-    if (cart.length === 0 || processing) return;
+    if (cart.length === 0 || processing || !loaded) return;
 
     setProcessing(true);
     setNotification("");
 
-    setTimeout(() => {
-      const sale = {
-        id: `SALE-${Date.now().toString().slice(-8)}`,
-        date: new Date().toLocaleString(),
-        items: [...cart],
-        subtotal,
-        discount: discountAmount,
-        total,
-        paymentMethod,
-      };
+    // Capture the current transaction details.
+    const saleDetails = {
+      items: cart.map((item) => ({
+        id: item.id,
+        name: item.name,
+        genericName: item.genericName,
+        sellingPrice: Number(item.sellingPrice),
+        quantity: item.quantity,
+      })),
+      subtotal,
+      discount: discountAmount,
+      total,
+      paymentMethod,
+    };
 
-      setCompletedSale(sale);
-      setProcessing(false);
-      setCart([]);
-      setDiscount(0);
+    // Simulate a short checkout process.
+    setTimeout(() => {
+      try {
+        // This validates stock, deducts batches and saves the sale.
+        const sale = completeSale(saleDetails);
+
+        setCompletedSale(sale);
+        setCart([]);
+        setDiscount(0);
+        setPaymentMethod("Cash");
+      } catch (error) {
+        setNotification(
+          error.message || "Unable to complete this sale."
+        );
+      } finally {
+        setProcessing(false);
+      }
     }, 1000);
   };
 
-  // Start a new transaction after a successful sale.
+  // Prepare the POS for another transaction.
   const startNewSale = () => {
     setCompletedSale(null);
     setSearch("");
@@ -173,6 +220,20 @@ export default function SalesPageContent() {
     setPaymentMethod("Cash");
     setNotification("");
   };
+
+  // Display a loading screen while saved data is being restored.
+  if (!loaded) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-blue-500/20 border-t-blue-500" />
+          <p className="mt-4 text-sm text-muted">
+            Loading pharmacy data...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -201,17 +262,41 @@ export default function SalesPageContent() {
           <div>
             <p className="text-xs text-muted">Cart items</p>
             <p className="font-semibold">
-              {cart.reduce((sum, item) => sum + item.quantity, 0)} units
+              {cart.reduce(
+                (sum, item) => sum + item.quantity,
+                0
+              )}{" "}
+              units
             </p>
           </div>
         </div>
       </div>
 
-      {/* Notification */}
+      {/* Sales navigation tabs */}
+      <div className="flex items-center gap-2 border-b border-[var(--border)]">
+        <Link
+          href="/sales"
+          className="flex items-center gap-2 border-b-2 border-blue-500 px-4 py-3 text-sm font-semibold text-blue-500"
+        >
+          <ShoppingCart size={17} />
+          New Sale
+        </Link>
+
+        <Link
+          href="/sales/history"
+          className="flex items-center gap-2 border-b-2 border-transparent px-4 py-3 text-sm font-medium text-muted transition hover:border-blue-500/50 hover:text-foreground"
+        >
+          <Receipt size={17} />
+          Sales History
+        </Link>
+      </div>
+
+      {/* Notifications and errors */}
       {notification && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-600">
           <AlertCircle size={18} />
           {notification}
+
           <button
             onClick={() => setNotification("")}
             className="ml-auto"
@@ -237,7 +322,9 @@ export default function SalesPageContent() {
                 <input
                   type="text"
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) =>
+                    setSearch(event.target.value)
+                  }
                   placeholder="Search medicine, generic name or SKU..."
                   className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] py-3 pl-10 pr-4 text-sm outline-none transition focus:border-blue-500"
                 />
@@ -253,7 +340,9 @@ export default function SalesPageContent() {
               {categories.map((category) => (
                 <button
                   key={category}
-                  onClick={() => setSelectedCategory(category)}
+                  onClick={() =>
+                    setSelectedCategory(category)
+                  }
                   className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-medium transition ${
                     selectedCategory === category
                       ? "bg-blue-600 text-white"
@@ -270,7 +359,9 @@ export default function SalesPageContent() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
             {filteredMedicines.map((medicine) => {
               const stock = getStock(medicine);
+
               const isOutOfStock = stock <= 0;
+
               const cartItem = cart.find(
                 (item) => item.id === medicine.id
               );
@@ -303,7 +394,9 @@ export default function SalesPageContent() {
                   </div>
 
                   <div className="mt-4 flex-1">
-                    <h3 className="font-semibold">{medicine.name}</h3>
+                    <h3 className="font-semibold">
+                      {medicine.name}
+                    </h3>
 
                     <p className="mt-1 text-xs text-muted">
                       {medicine.genericName}
@@ -318,10 +411,14 @@ export default function SalesPageContent() {
 
                   <div className="mt-4 flex items-end justify-between border-t border-[var(--border)] pt-3">
                     <div>
-                      <p className="text-xs text-muted">Selling price</p>
+                      <p className="text-xs text-muted">
+                        Selling price
+                      </p>
+
                       <p className="mt-1 font-bold text-blue-500">
                         {formatMoney(medicine.sellingPrice)}
                       </p>
+
                       <p className="mt-1 text-[11px] text-muted">
                         {stock} units available
                       </p>
@@ -343,8 +440,15 @@ export default function SalesPageContent() {
 
           {filteredMedicines.length === 0 && (
             <div className="glass-panel rounded-2xl px-5 py-14 text-center">
-              <Search size={30} className="mx-auto text-muted" />
-              <h3 className="mt-3 font-semibold">No medicines found</h3>
+              <Search
+                size={30}
+                className="mx-auto text-muted"
+              />
+
+              <h3 className="mt-3 font-semibold">
+                No medicines found
+              </h3>
+
               <p className="mt-1 text-sm text-muted">
                 Try another search term or category.
               </p>
@@ -352,7 +456,7 @@ export default function SalesPageContent() {
           )}
         </section>
 
-        {/* Shopping cart and checkout */}
+        {/* Cart and checkout */}
         <aside className="h-fit rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-sm sm:p-5 xl:sticky xl:top-24">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -373,9 +477,11 @@ export default function SalesPageContent() {
                   size={30}
                   className="mx-auto text-muted opacity-60"
                 />
+
                 <p className="mt-3 text-sm font-medium">
                   Your cart is empty
                 </p>
+
                 <p className="mt-1 text-xs text-muted">
                   Select medicines to begin a sale.
                 </p>
@@ -391,6 +497,7 @@ export default function SalesPageContent() {
                       <p className="truncate text-sm font-semibold">
                         {item.name}
                       </p>
+
                       <p className="mt-1 text-xs text-muted">
                         {formatMoney(item.sellingPrice)} each
                       </p>
@@ -408,7 +515,9 @@ export default function SalesPageContent() {
                   <div className="mt-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => updateQuantity(item.id, -1)}
+                        onClick={() =>
+                          updateQuantity(item.id, -1)
+                        }
                         className="rounded-lg border border-[var(--border)] p-1.5 hover:bg-[var(--background)]"
                         aria-label="Decrease quantity"
                       >
@@ -420,7 +529,9 @@ export default function SalesPageContent() {
                       </span>
 
                       <button
-                        onClick={() => updateQuantity(item.id, 1)}
+                        onClick={() =>
+                          updateQuantity(item.id, 1)
+                        }
                         className="rounded-lg border border-[var(--border)] p-1.5 hover:bg-[var(--background)]"
                         aria-label="Increase quantity"
                       >
@@ -429,7 +540,9 @@ export default function SalesPageContent() {
                     </div>
 
                     <p className="text-sm font-bold">
-                      {formatMoney(item.sellingPrice * item.quantity)}
+                      {formatMoney(
+                        item.sellingPrice * item.quantity
+                      )}
                     </p>
                   </div>
                 </div>
@@ -450,7 +563,10 @@ export default function SalesPageContent() {
               value={discount}
               onChange={(event) => {
                 const value = Number(event.target.value);
-                setDiscount(Math.min(100, Math.max(0, value || 0)));
+
+                setDiscount(
+                  Math.min(100, Math.max(0, value || 0))
+                );
               }}
               disabled={cart.length === 0}
               className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm outline-none focus:border-blue-500 disabled:opacity-50"
@@ -459,7 +575,9 @@ export default function SalesPageContent() {
 
           {/* Payment method */}
           <div className="mt-5">
-            <p className="text-sm font-semibold">Payment method</p>
+            <p className="text-sm font-semibold">
+              Payment method
+            </p>
 
             <div className="mt-2 grid grid-cols-3 gap-2">
               {[
@@ -472,7 +590,9 @@ export default function SalesPageContent() {
                 return (
                   <button
                     key={method.name}
-                    onClick={() => setPaymentMethod(method.name)}
+                    onClick={() =>
+                      setPaymentMethod(method.name)
+                    }
                     className={`flex flex-col items-center gap-2 rounded-xl border p-3 text-xs transition ${
                       paymentMethod === method.name
                         ? "border-blue-500 bg-blue-500/10 text-blue-500"
@@ -502,17 +622,22 @@ export default function SalesPageContent() {
             </div>
 
             <div className="flex items-center justify-between border-t border-[var(--border)] pt-3">
-              <span className="font-semibold">Total payable</span>
+              <span className="font-semibold">
+                Total payable
+              </span>
+
               <span className="text-xl font-bold text-blue-500">
                 {formatMoney(total)}
               </span>
             </div>
           </div>
 
-          {/* Checkout button */}
+          {/* Complete sale */}
           <button
             onClick={handleCheckout}
-            disabled={cart.length === 0 || processing}
+            disabled={
+              cart.length === 0 || processing || !loaded
+            }
             className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {processing ? (
@@ -534,7 +659,7 @@ export default function SalesPageContent() {
         </aside>
       </div>
 
-      {/* Successful sale modal */}
+      {/* Successful transaction receipt */}
       {completedSale && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-2xl">
@@ -547,20 +672,22 @@ export default function SalesPageContent() {
             </h2>
 
             <p className="mt-1 text-center text-sm text-muted">
-              Your demo transaction was successful.
+              Your transaction was successfully recorded.
             </p>
 
             <div className="mt-5 rounded-xl border border-[var(--border)] p-4">
-              <div className="flex justify-between text-xs text-muted">
+              <div className="flex justify-between gap-3 text-xs text-muted">
                 <span>Transaction ID</span>
                 <span className="font-semibold text-foreground">
                   {completedSale.id}
                 </span>
               </div>
 
-              <div className="mt-3 flex justify-between text-xs text-muted">
+              <div className="mt-3 flex justify-between gap-3 text-xs text-muted">
                 <span>Date</span>
-                <span>{completedSale.date}</span>
+                <span>
+                  {new Date(completedSale.date).toLocaleString()}
+                </span>
               </div>
 
               <div className="mt-3 flex justify-between text-xs text-muted">
@@ -570,16 +697,19 @@ export default function SalesPageContent() {
 
               <div className="my-4 border-t border-[var(--border)]" />
 
-              {completedSale.items.map((item) => (
+              {completedSale.items.map((item, index) => (
                 <div
-                  key={item.id}
+                  key={`${item.id}-${index}`}
                   className="mb-2 flex justify-between gap-3 text-sm"
                 >
                   <span className="text-muted">
                     {item.name} × {item.quantity}
                   </span>
+
                   <span className="font-medium">
-                    {formatMoney(item.sellingPrice * item.quantity)}
+                    {formatMoney(
+                      item.sellingPrice * item.quantity
+                    )}
                   </span>
                 </div>
               ))}
@@ -587,16 +717,23 @@ export default function SalesPageContent() {
               <div className="mt-4 border-t border-[var(--border)] pt-3">
                 <div className="flex justify-between text-xs text-muted">
                   <span>Subtotal</span>
-                  <span>{formatMoney(completedSale.subtotal)}</span>
+                  <span>
+                    {formatMoney(completedSale.subtotal)}
+                  </span>
                 </div>
 
                 <div className="mt-2 flex justify-between text-xs text-muted">
                   <span>Discount</span>
-                  <span>{formatMoney(completedSale.discount)}</span>
+                  <span>
+                    {formatMoney(completedSale.discount)}
+                  </span>
                 </div>
 
                 <div className="mt-3 flex justify-between">
-                  <span className="font-semibold">Total paid</span>
+                  <span className="font-semibold">
+                    Total paid
+                  </span>
+
                   <span className="text-lg font-bold text-emerald-500">
                     {formatMoney(completedSale.total)}
                   </span>
