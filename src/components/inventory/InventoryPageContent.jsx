@@ -23,11 +23,8 @@ import {
 } from "lucide-react";
 
 import MedicineModal from "@/components/inventory/MedicineModal";
-
-import {
-  medicines as initialMedicines,
-  medicineCategories,
-} from "@/data/inventory";
+import { medicineCategories } from "@/data/inventory";
+import { usePharmacy } from "@/context/PharmacyContext";
 
 const PAGE_SIZE = 6;
 
@@ -60,7 +57,6 @@ const getStockStatus = (medicine) => {
 };
 
 // Calculate days remaining before expiry.
-// The current date is passed in from component state.
 const getDaysUntilExpiry = (expiryDate, today) => {
   if (!today || !expiryDate) return null;
 
@@ -86,7 +82,7 @@ const getExpiryStatus = (expiryDate, today) => {
   return "Valid";
 };
 
-// Count medicines containing batches that expire within 90 days.
+// Count medicines containing batches expiring within 90 days.
 const getExpiringSoonCount = (items, today) => {
   if (!today) return 0;
 
@@ -146,7 +142,12 @@ const formatDate = (date) => {
 };
 
 export default function InventoryPageContent() {
-  const [medicines, setMedicines] = useState(initialMedicines);
+  // Read inventory from the shared pharmacy context.
+  const {
+    medicines,
+    addMedicine,
+    loaded: pharmacyLoaded,
+  } = usePharmacy();
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All Categories");
@@ -159,8 +160,7 @@ export default function InventoryPageContent() {
   const [loading, setLoading] = useState(true);
 
   // Store the browser's current date after mounting.
-  // This prevents Next.js from evaluating new Date()
-  // during static prerendering.
+  // This avoids calling new Date() during prerendering.
   const [today, setToday] = useState(null);
 
   useEffect(() => {
@@ -171,7 +171,7 @@ export default function InventoryPageContent() {
     setToday(currentDate.getTime());
   }, []);
 
-  // Simulate the initial loading process.
+  // Simulate a short loading animation.
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
@@ -179,6 +179,9 @@ export default function InventoryPageContent() {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Do not display the inventory until saved data has loaded.
+  const isLoading = loading || !pharmacyLoaded;
 
   // Calculate inventory dashboard statistics.
   const statistics = useMemo(() => {
@@ -224,7 +227,7 @@ export default function InventoryPageContent() {
     };
   }, [medicines, today]);
 
-  // Search and filter the medicine list.
+  // Search and filter the shared medicine list.
   const filteredMedicines = useMemo(() => {
     return medicines.filter((medicine) => {
       const searchTerm = search.toLowerCase().trim();
@@ -274,18 +277,19 @@ export default function InventoryPageContent() {
     currentPage * PAGE_SIZE
   );
 
-  // Add a medicine created through the modal.
+  // Add a medicine through the shared context.
   function handleAddMedicine(newMedicine) {
-    setMedicines((current) => [
-      {
+    try {
+      addMedicine({
         ...newMedicine,
-        id: newMedicine.id || `MED-${Date.now()}`,
         batches: newMedicine.batches || [],
-      },
-      ...current,
-    ]);
+      });
 
-    setModalOpen(false);
+      setModalOpen(false);
+    } catch (error) {
+      console.error("Could not add medicine:", error);
+      window.alert(error.message || "Could not add medicine.");
+    }
   }
 
   // Expand or collapse batch details.
@@ -374,7 +378,7 @@ export default function InventoryPageContent() {
         <div className="flex flex-wrap gap-3">
           <button
             onClick={exportCSV}
-            disabled={filteredMedicines.length === 0}
+            disabled={filteredMedicines.length === 0 || isLoading}
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-foreground transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Download size={17} />
@@ -383,7 +387,8 @@ export default function InventoryPageContent() {
 
           <button
             onClick={() => setModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
+            disabled={!pharmacyLoaded}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus size={18} />
             Add Medicine
@@ -546,7 +551,7 @@ export default function InventoryPageContent() {
           </span>
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <LoadingRows />
         ) : filteredMedicines.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
@@ -597,7 +602,6 @@ export default function InventoryPageContent() {
                     return (
                       <Fragment key={medicine.id}>
                         <tr className="transition hover:bg-white/[0.02]">
-
                           {/* Medicine name */}
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-3">
@@ -803,9 +807,7 @@ export default function InventoryPageContent() {
             <div className="flex flex-col gap-3 border-t border-white/5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-muted">
                 Showing{" "}
-                {filteredMedicines.length === 0
-                  ? 0
-                  : (currentPage - 1) * PAGE_SIZE + 1}
+                {(currentPage - 1) * PAGE_SIZE + 1}
                 {" "}to{" "}
                 {Math.min(
                   currentPage * PAGE_SIZE,

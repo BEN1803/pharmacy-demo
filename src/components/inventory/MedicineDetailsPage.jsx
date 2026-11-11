@@ -1,53 +1,75 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+
 import {
   ArrowLeft,
   Package,
   Plus,
   TrendingUp,
   AlertTriangle,
-  CalendarDays,
   ClipboardList,
   X,
   CheckCircle2,
   Clock3,
 } from "lucide-react";
 
-import { medicines } from "@/data/inventory";
+import { usePharmacy } from "@/context/PharmacyContext";
 
 const formatMoney = (amount) =>
   new Intl.NumberFormat("en-TZ", {
     style: "currency",
     currency: "TZS",
     maximumFractionDigits: 0,
-  }).format(amount || 0);
+  }).format(Number(amount) || 0);
 
 const formatDate = (date) => {
   if (!date) return "Not specified";
 
-  return new Date(date).toLocaleDateString("en-GB", {
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "Invalid date";
+  }
+
+  return parsedDate.toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
 };
 
+const getStock = (medicine) =>
+  (medicine?.batches || []).reduce(
+    (total, batch) => total + Number(batch.quantity || 0),
+    0
+  );
+
 export default function MedicineDetailsPage() {
   const params = useParams();
   const medicineId = params.id;
 
-  // Find the selected medicine from our mock inventory data.
-  const originalMedicine = medicines.find(
-    (item) => String(item.id) === String(medicineId)
+  // Read the medicine from the shared pharmacy inventory.
+  const {
+    medicines,
+    updateMedicine,
+    loaded,
+  } = usePharmacy();
+
+  // Find the latest version of this medicine.
+  const medicine = useMemo(
+    () =>
+      medicines.find(
+        (item) => String(item.id) === String(medicineId)
+      ) || null,
+    [medicines, medicineId]
   );
 
-  // Keep a local copy so stock changes can be demonstrated.
-  const [medicine, setMedicine] = useState(originalMedicine);
   const [showStockModal, setShowStockModal] = useState(false);
+
   const [stockForm, setStockForm] = useState({
     batchNumber: "",
     quantity: "",
@@ -55,43 +77,104 @@ export default function MedicineDetailsPage() {
     supplier: "",
     purchasePrice: "",
   });
-  const [movements, setMovements] = useState(() => {
-    if (!originalMedicine) return [];
 
-    return originalMedicine.batches.map((batch, index) => ({
-      id: `${originalMedicine.id}-${index}`,
-      type: "Stock received",
-      batchNumber: batch.batchNumber,
-      quantity: Number(batch.quantity),
-      date: "Opening inventory",
-      supplier: originalMedicine.manufacturer,
-    }));
-  });
+  const [movements, setMovements] = useState([]);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const totalStock = useMemo(() => {
-    if (!medicine) return 0;
+  // Store today's date after mounting to avoid prerendering issues.
+  const [today, setToday] = useState(null);
 
-    return medicine.batches.reduce(
-      (total, batch) => total + Number(batch.quantity || 0),
-      0
+  useEffect(() => {
+    const currentDate = new Date();
+
+    currentDate.setHours(0, 0, 0, 0);
+
+    setToday(currentDate.getTime());
+  }, []);
+
+  // Build the opening stock movement history once the shared data loads.
+  // The effect depends on the medicine ID, not the entire medicine object,
+  // so receiving stock does not reset the movement history.
+  useEffect(() => {
+    if (!loaded || !medicine) return;
+
+    setMovements(
+      (medicine.batches || []).map((batch, index) => ({
+        id: `${medicine.id}-${batch.batchNumber}-${index}`,
+        type: "Opening stock",
+        batchNumber: batch.batchNumber,
+        quantity: Number(batch.quantity || 0),
+        date: "Opening inventory",
+        supplier: medicine.manufacturer || "Not specified",
+      }))
     );
-  }, [medicine]);
+  }, [loaded, medicine?.id]);
+
+  // Calculate available stock from all batches.
+  const totalStock = useMemo(
+    () => getStock(medicine),
+    [medicine]
+  );
+
+  // Show a temporary success notification.
+  useEffect(() => {
+    if (!successMessage) return;
+
+    const timer = setTimeout(() => {
+      setSuccessMessage("");
+    }, 3500);
+
+    return () => clearTimeout(timer);
+  }, [successMessage]);
+
+  // Show a temporary error notification.
+  useEffect(() => {
+    if (!errorMessage) return;
+
+    const timer = setTimeout(() => {
+      setErrorMessage("");
+    }, 4500);
+
+    return () => clearTimeout(timer);
+  }, [errorMessage]);
+
+  // Handle loading before checking whether the medicine exists.
+  if (!loaded) {
+    return (
+      <div className="glass-card rounded-2xl p-10">
+        <div className="mx-auto flex max-w-sm flex-col items-center text-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/10 border-t-blue-500" />
+
+          <h2 className="mt-5 font-semibold text-foreground">
+            Loading medicine details
+          </h2>
+
+          <p className="mt-2 text-sm text-muted">
+            Retrieving the latest inventory information...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!medicine) {
     return (
       <div className="glass-card rounded-2xl p-10 text-center">
         <Package size={42} className="mx-auto text-muted" />
+
         <h2 className="mt-4 text-xl font-semibold text-foreground">
           Medicine not found
         </h2>
+
         <p className="mt-2 text-sm text-muted">
           This medicine may not exist in the current demo inventory.
         </p>
+
         <Link
           href="/inventory"
-          className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700"
+          className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-blue-700"
         >
           <ArrowLeft size={16} />
           Back to inventory
@@ -100,23 +183,28 @@ export default function MedicineDetailsPage() {
     );
   }
 
+  // Determine current stock status.
   const stockStatus =
     totalStock === 0
       ? "Out of Stock"
-      : totalStock <= medicine.reorderLevel
+      : totalStock <= Number(medicine.reorderLevel)
       ? "Low Stock"
       : "In Stock";
 
   const stockStatusStyle =
     stockStatus === "Out of Stock"
-      ? "bg-red-500/10 text-red-400 border-red-500/20"
+      ? "border-red-500/20 bg-red-500/10 text-red-400"
       : stockStatus === "Low Stock"
-      ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-      : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+      ? "border-amber-500/20 bg-amber-500/10 text-amber-400"
+      : "border-emerald-500/20 bg-emerald-500/10 text-emerald-400";
 
-  const inventoryValue = totalStock * medicine.sellingPrice;
-  const inventoryCost = totalStock * medicine.purchasePrice;
+  const inventoryValue =
+    totalStock * Number(medicine.sellingPrice || 0);
 
+  const inventoryCost =
+    totalStock * Number(medicine.purchasePrice || 0);
+
+  // Update the stock form fields.
   function updateStockField(event) {
     const { name, value } = event.target;
 
@@ -126,68 +214,118 @@ export default function MedicineDetailsPage() {
     }));
   }
 
+  // Receive a new batch and save it to shared inventory.
   function handleStockSubmit(event) {
     event.preventDefault();
 
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    const batchNumber = stockForm.batchNumber.trim();
+    const supplier = stockForm.supplier.trim();
     const quantity = Number(stockForm.quantity);
     const purchasePrice = Number(stockForm.purchasePrice);
 
+    // Validate required values.
     if (
-      !stockForm.batchNumber.trim() ||
+      !batchNumber ||
       !stockForm.expiryDate ||
-      !stockForm.supplier.trim() ||
+      !supplier ||
+      !Number.isFinite(quantity) ||
       quantity <= 0 ||
+      !Number.isFinite(purchasePrice) ||
       purchasePrice < 0
     ) {
+      setErrorMessage("Please enter valid stock information.");
+      return;
+    }
+
+    // Prevent duplicate batch numbers for this medicine.
+    const duplicateBatch = (medicine.batches || []).some(
+      (batch) =>
+        String(batch.batchNumber).toLowerCase() ===
+        batchNumber.toLowerCase()
+    );
+
+    if (duplicateBatch) {
+      setErrorMessage(
+        "This batch number already exists for this medicine."
+      );
+      return;
+    }
+
+    // Do not accept an invalid expiry date.
+    const expiryDate = new Date(
+      `${stockForm.expiryDate}T00:00:00`
+    );
+
+    if (Number.isNaN(expiryDate.getTime())) {
+      setErrorMessage("Please enter a valid expiry date.");
       return;
     }
 
     setSaving(true);
 
-    // Simulate a short stock-receiving process.
+    // Simulate a short stock receiving process.
     setTimeout(() => {
-      const newBatch = {
-        batchNumber: stockForm.batchNumber.trim(),
-        quantity,
-        expiryDate: stockForm.expiryDate,
-      };
-
-      setMedicine((current) => ({
-        ...current,
-        purchasePrice,
-        batches: [...current.batches, newBatch],
-      }));
-
-      setMovements((current) => [
-        {
-          id: `${Date.now()}`,
-          type: "Stock received",
-          batchNumber: newBatch.batchNumber,
+      try {
+        const newBatch = {
+          batchNumber,
           quantity,
-          date: new Date().toLocaleDateString("en-GB"),
-          supplier: stockForm.supplier.trim(),
-        },
-        ...current,
-      ]);
+          expiryDate: stockForm.expiryDate,
+        };
 
-      setStockForm({
-        batchNumber: "",
-        quantity: "",
-        expiryDate: "",
-        supplier: "",
-        purchasePrice: "",
-      });
+        // Update the shared medicine record.
+        // Inventory and POS will receive this update automatically.
+        updateMedicine({
+          ...medicine,
+          purchasePrice,
+          batches: [
+            ...(medicine.batches || []),
+            newBatch,
+          ],
+        });
 
-      setSaving(false);
-      setShowStockModal(false);
-      setSuccessMessage("New stock has been added successfully.");
+        // Record the stock receipt in this page's movement history.
+        setMovements((current) => [
+          {
+            id: `${Date.now()}`,
+            type: "Stock received",
+            batchNumber,
+            quantity,
+            date: new Date().toLocaleDateString("en-GB"),
+            supplier,
+          },
+          ...current,
+        ]);
 
-      setTimeout(() => setSuccessMessage(""), 3500);
+        setStockForm({
+          batchNumber: "",
+          quantity: "",
+          expiryDate: "",
+          supplier: "",
+          purchasePrice: "",
+        });
+
+        setShowStockModal(false);
+        setSuccessMessage(
+          "New stock has been added successfully."
+        );
+      } catch (error) {
+        console.error("Could not receive stock:", error);
+
+        setErrorMessage(
+          error.message || "Could not add the new stock."
+        );
+      } finally {
+        setSaving(false);
+      }
     }, 700);
   }
 
   return (
     <div className="space-y-6">
+
       {/* Page heading and navigation */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -233,6 +371,14 @@ export default function MedicineDetailsPage() {
         </div>
       )}
 
+      {/* Error notification */}
+      {errorMessage && (
+        <div className="flex items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400">
+          <AlertTriangle size={18} />
+          {errorMessage}
+        </div>
+      )}
+
       {/* Stock summary cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
@@ -274,10 +420,12 @@ export default function MedicineDetailsPage() {
           <div className="rounded-xl bg-blue-500/10 p-2.5 text-blue-400">
             <Package size={20} />
           </div>
+
           <div>
             <h2 className="font-semibold text-foreground">
               Medicine Information
             </h2>
+
             <p className="text-xs text-muted">
               Product identification and pricing information
             </p>
@@ -293,18 +441,22 @@ export default function MedicineDetailsPage() {
           <InfoItem label="Manufacturer" value={medicine.manufacturer} />
           <InfoItem label="SKU" value={medicine.sku} />
           <InfoItem label="Barcode" value={medicine.barcode} />
+
           <InfoItem
             label="Purchase price"
             value={formatMoney(medicine.purchasePrice)}
           />
+
           <InfoItem
             label="Selling price"
             value={formatMoney(medicine.sellingPrice)}
           />
+
           <InfoItem
             label="Profit per unit"
             value={formatMoney(
-              medicine.sellingPrice - medicine.purchasePrice
+              Number(medicine.sellingPrice || 0) -
+              Number(medicine.purchasePrice || 0)
             )}
           />
         </div>
@@ -314,14 +466,17 @@ export default function MedicineDetailsPage() {
       <section className="glass-card overflow-hidden rounded-2xl">
         <div className="flex flex-col gap-2 border-b border-white/5 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="font-semibold text-foreground">Medicine Batches</h2>
+            <h2 className="font-semibold text-foreground">
+              Medicine Batches
+            </h2>
+
             <p className="mt-1 text-xs text-muted">
               Monitor quantities and expiry dates for each batch
             </p>
           </div>
 
           <span className="w-fit rounded-lg bg-white/5 px-3 py-1.5 text-xs text-muted">
-            {medicine.batches.length} batches
+            {(medicine.batches || []).length} batches
           </span>
         </div>
 
@@ -337,14 +492,25 @@ export default function MedicineDetailsPage() {
             </thead>
 
             <tbody className="divide-y divide-white/5">
-              {medicine.batches.map((batch, index) => {
-                const daysRemaining = Math.ceil(
-                  (new Date(batch.expiryDate).getTime() - new Date().setHours(0, 0, 0, 0)) /
-                    (1000 * 60 * 60 * 24)
-                );
+              {(medicine.batches || []).map((batch, index) => {
+                const expiryTime = batch.expiryDate
+                  ? new Date(
+                      `${batch.expiryDate}T00:00:00`
+                    ).getTime()
+                  : NaN;
+
+                const daysRemaining =
+                  today && Number.isFinite(expiryTime)
+                    ? Math.ceil(
+                        (expiryTime - today) /
+                        (1000 * 60 * 60 * 24)
+                      )
+                    : null;
 
                 const expiryStatus =
-                  daysRemaining < 0
+                  daysRemaining === null
+                    ? "Unknown"
+                    : daysRemaining < 0
                     ? "Expired"
                     : daysRemaining <= 90
                     ? "Expiring soon"
@@ -352,22 +518,27 @@ export default function MedicineDetailsPage() {
 
                 const expiryStyle =
                   expiryStatus === "Expired"
-                    ? "text-red-400 bg-red-500/10"
+                    ? "bg-red-500/10 text-red-400"
                     : expiryStatus === "Expiring soon"
-                    ? "text-amber-400 bg-amber-500/10"
-                    : "text-emerald-400 bg-emerald-500/10";
+                    ? "bg-amber-500/10 text-amber-400"
+                    : expiryStatus === "Valid"
+                    ? "bg-emerald-500/10 text-emerald-400"
+                    : "bg-white/5 text-muted";
 
                 return (
                   <tr key={`${batch.batchNumber}-${index}`}>
                     <td className="px-5 py-4 font-medium text-foreground">
                       {batch.batchNumber}
                     </td>
+
                     <td className="px-5 py-4 text-foreground">
-                      {Number(batch.quantity).toLocaleString()} units
+                      {Number(batch.quantity || 0).toLocaleString()} units
                     </td>
+
                     <td className="px-5 py-4 text-muted">
                       {formatDate(batch.expiryDate)}
                     </td>
+
                     <td className="px-5 py-4">
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-medium ${expiryStyle}`}
@@ -378,6 +549,17 @@ export default function MedicineDetailsPage() {
                   </tr>
                 );
               })}
+
+              {(medicine.batches || []).length === 0 && (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-5 py-10 text-center text-sm text-muted"
+                  >
+                    No batches recorded. Receive stock to add the first batch.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -390,10 +572,12 @@ export default function MedicineDetailsPage() {
             <div className="rounded-xl bg-violet-500/10 p-2.5 text-violet-400">
               <Clock3 size={20} />
             </div>
+
             <div>
               <h2 className="font-semibold text-foreground">
                 Stock Movement History
               </h2>
+
               <p className="mt-1 text-xs text-muted">
                 Record of stock received for this medicine
               </p>
@@ -416,10 +600,12 @@ export default function MedicineDetailsPage() {
                   <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-400">
                     <Plus size={18} />
                   </div>
+
                   <div>
                     <p className="text-sm font-medium text-foreground">
                       {movement.type}
                     </p>
+
                     <p className="mt-1 text-xs text-muted">
                       Batch: {movement.batchNumber} · Supplier: {movement.supplier}
                     </p>
@@ -430,7 +616,10 @@ export default function MedicineDetailsPage() {
                   <p className="text-sm font-semibold text-emerald-400">
                     +{movement.quantity} units
                   </p>
-                  <p className="mt-1 text-xs text-muted">{movement.date}</p>
+
+                  <p className="mt-1 text-xs text-muted">
+                    {movement.date}
+                  </p>
                 </div>
               </div>
             ))}
@@ -447,6 +636,7 @@ export default function MedicineDetailsPage() {
                 <h2 className="text-lg font-semibold text-white">
                   Receive New Stock
                 </h2>
+
                 <p className="mt-1 text-xs text-gray-400">
                   Add a new batch of {medicine.name}
                 </p>
@@ -467,6 +657,7 @@ export default function MedicineDetailsPage() {
                 <label className="mb-2 block text-sm text-gray-300">
                   Batch number
                 </label>
+
                 <input
                   name="batchNumber"
                   value={stockForm.batchNumber}
@@ -482,10 +673,12 @@ export default function MedicineDetailsPage() {
                   <label className="mb-2 block text-sm text-gray-300">
                     Quantity received
                   </label>
+
                   <input
                     name="quantity"
                     type="number"
                     min="1"
+                    step="1"
                     value={stockForm.quantity}
                     onChange={updateStockField}
                     placeholder="e.g. 200"
@@ -498,6 +691,7 @@ export default function MedicineDetailsPage() {
                   <label className="mb-2 block text-sm text-gray-300">
                     Expiry date
                   </label>
+
                   <input
                     name="expiryDate"
                     type="date"
@@ -513,6 +707,7 @@ export default function MedicineDetailsPage() {
                 <label className="mb-2 block text-sm text-gray-300">
                   Supplier
                 </label>
+
                 <input
                   name="supplier"
                   value={stockForm.supplier}
@@ -527,10 +722,12 @@ export default function MedicineDetailsPage() {
                 <label className="mb-2 block text-sm text-gray-300">
                   Purchase price per unit (TZS)
                 </label>
+
                 <input
                   name="purchasePrice"
                   type="number"
                   min="0"
+                  step="1"
                   value={stockForm.purchasePrice}
                   onChange={updateStockField}
                   placeholder="e.g. 150"
@@ -543,7 +740,8 @@ export default function MedicineDetailsPage() {
                 <button
                   type="button"
                   onClick={() => setShowStockModal(false)}
-                  className="rounded-xl border border-white/10 px-5 py-3 text-sm font-medium text-gray-300 transition hover:bg-white/5"
+                  disabled={saving}
+                  className="rounded-xl border border-white/10 px-5 py-3 text-sm font-medium text-gray-300 transition hover:bg-white/5 disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -564,27 +762,43 @@ export default function MedicineDetailsPage() {
   );
 }
 
-function SummaryCard({ title, value, description, icon: Icon, iconStyle }) {
+// Reusable stock summary card.
+function SummaryCard({
+  title,
+  value,
+  description,
+  icon: Icon,
+  iconStyle,
+}) {
   return (
     <div className="glass-card rounded-2xl p-5">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-muted">{title}</p>
-          <h3 className="mt-3 text-xl font-bold text-foreground">{value}</h3>
+
+          <h3 className="mt-3 text-xl font-bold text-foreground">
+            {value}
+          </h3>
         </div>
+
         <div className={`rounded-xl p-3 ${iconStyle}`}>
           <Icon size={20} />
         </div>
       </div>
-      <p className="mt-3 text-xs text-muted">{description}</p>
+
+      <p className="mt-3 text-xs text-muted">
+        {description}
+      </p>
     </div>
   );
 }
 
+// Reusable medicine information item.
 function InfoItem({ label, value }) {
   return (
     <div>
       <p className="text-xs text-muted">{label}</p>
+
       <p className="mt-1 break-words text-sm font-medium text-foreground">
         {value || "Not specified"}
       </p>
