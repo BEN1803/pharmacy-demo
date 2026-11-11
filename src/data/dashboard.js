@@ -1,0 +1,195 @@
+
+export const dashboardStats = [
+  {
+    title: "Total Revenue",
+    value: "TZS 18,450,000",
+    change: "+14.8%",
+    trend: "up",
+    description: "Compared to previous period",
+    icon: "revenue",
+  },
+  {
+    title: "Net Profit",
+    value: "TZS 5,280,000",
+    change: "+9.3%",
+    trend: "up",
+    description: "Compared to previous period",
+    icon: "profit",
+  },
+  {
+    title: "Total Sales",
+    value: "1,842",
+    change: "+12.5%",
+    trend: "up",
+    description: "Completed transactions",
+    icon: "sales",
+  },
+  {
+    title: "Inventory Value",
+    value: "TZS 32,800,000",
+    change: "-2.4%",
+    trend: "down",
+    description: "Current stock at cost",
+    icon: "inventory",
+  },
+];
+
+export const salesData = {
+  week: [
+    { label: "Mon", revenue: 1250000, profit: 340000 },
+    { label: "Tue", revenue: 1580000, profit: 420000 },
+    { label: "Wed", revenue: 1320000, profit: 360000 },
+    { label: "Thu", revenue: 1900000, profit: 510000 },
+    { label: "Fri", revenue: 1750000, profit: 470000 },
+    { label: "Sat", revenue: 2300000, profit: 620000 },
+    { label: "Sun", revenue: 1850000, profit: 490000 },
+  ],
+
+  month: [
+    { label: "Week 1", revenue: 6200000, profit: 1650000 },
+    { label: "Week 2", revenue: 7100000, profit: 1920000 },
+    { label: "Week 3", revenue: 5800000, profit: 1510000 },
+    { label: "Week 4", revenue: 9350000, profit: 2500000 },
+  ],
+
+  year: [
+    { label: "Jan", revenue: 12500000, profit: 3200000 },
+    { label: "Feb", revenue: 14200000, profit: 3800000 },
+    { label: "Mar", revenue: 11800000, profit: 3100000 },
+    { label: "Apr", revenue: 15600000, profit: 4200000 },
+    { label: "May", revenue: 16300000, profit: 4500000 },
+    { label: "Jun", revenue: 14800000, profit: 3900000 },
+    { label: "Jul", revenue: 17200000, profit: 4700000 },
+    { label: "Aug", revenue: 15900000, profit: 4300000 },
+    { label: "Sep", revenue: 18500000, profit: 5100000 },
+    { label: "Oct", revenue: 16800000, profit: 4600000 },
+    { label: "Nov", revenue: 18450000, profit: 5280000 },
+    { label: "Dec", revenue: 0, profit: 0 },
+  ],
+};
+
+export const topProducts = [
+  {
+    id: 1,
+    name: "Paracetamol 500mg",
+    category: "Pain Relief",
+    sold: 842,
+    revenue: 1684000,
+    share: 92,
+  },
+  {
+    id: 2,
+    name: "Amoxicillin 500mg",
+    category: "Antibiotics",
+    sold: 624,
+    revenue: 3120000,
+    share: 78,
+  },
+  {
+    id: 3,
+    name: "Cetirizine 10mg",
+    category: "Antihistamine",
+    sold: 486,
+    revenue: 972000,
+    share: 64,
+  },
+  {
+    id: 4,
+    name: "Vitamin C 1000mg",
+    category: "Supplements",
+    sold: 392,
+    revenue: 1176000,
+    share: 48,
+  },
+  {
+    id: 5,
+    name: "Ibuprofen 400mg",
+    category: "Pain Relief",
+    sold: 318,
+    revenue: 954000,
+    share: 38,
+  },
+];
+
+export const stockAlerts = [
+  {
+    id: 1,
+    name: "Paracetamol 500mg",
+    category: "Pain Relief",
+    quantity: 8,
+    threshold: 30,
+    status: "Low stock",
+  },
+  {
+    id: 2,
+    name: "Amoxicillin 250mg",
+    category: "Antibiotics",
+    quantity: 12,
+    threshold: 25,
+    status: "Low stock",
+  },
+  {
+    id: 3,
+    name: "Vitamin C 1000mg",
+    category: "Supplements",
+    quantity: 0,
+    threshold: 20,
+    status: "Out of stock",
+  },
+  {
+    id: 4,
+    name: "Cetirizine 10mg",
+    category: "Antihistamine",
+    quantity: 15,
+    threshold: 30,
+    status: "Low stock",
+  },
+];
+
+export const recentTransactions = [
+  {
+    id: "TRX-2048",
+    customer: "Walk-in Customer",
+    product: "Paracetamol 500mg",
+    amount: 85000,
+    payment: "Cash",
+    status: "Completed",
+    time: "10:42 AM",
+  },
+  {
+    id: "TRX-2047",
+    customer: "Mary Joseph",
+    product: "Amoxicillin 500mg",
+    amount: 125000,
+    payment: "M-Pesa",
+    status: "Completed",
+    time: "10:25 AM",
+  },
+  {
+    id: "TRX-2046",
+    customer: "John Michael",
+    product: "Mixed products",
+    amount: 248000,
+    payment: "Bank",
+    status: "Completed",
+    time: "09:58 AM",
+  },
+  {
+    id: "TRX-2045",
+    customer: "Walk-in Customer",
+    product: "Vitamin C 1000mg",
+    amount: 45000,
+    payment: "Cash",
+    status: "Completed",
+    time: "09:31 AM",
+  },
+  {
+    id: "TRX-2044",
+    customer: "Sarah Peter",
+    product: "Cetirizine 10mg",
+    amount: 62000,
+    payment: "M-Pesa",
+    status: "Pending",
+    time: "09:12 AM",
+  },
+];
