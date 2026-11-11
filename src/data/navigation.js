@@ -29,6 +29,7 @@ export const navigationGroups = [
       {
         label: "Sales",
         icon: ShoppingCart,
+        href: "/sales",
       },
       {
         label: "Analytics",
