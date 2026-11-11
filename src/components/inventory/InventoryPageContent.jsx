@@ -1,134 +1,191 @@
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+
 import {
   Search,
   Plus,
   Package,
   AlertTriangle,
   XCircle,
-  CalendarClock,
-  ArrowDownToLine,
+  CalendarDays,
+  Download,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  Pill,
+  RefreshCw,
+  Filter,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  Pill,
-  SlidersHorizontal,
-  RefreshCw,
-  Boxes,
 } from "lucide-react";
 
-import MedicineModal from "./MedicineModal";
+import MedicineModal from "@/components/inventory/MedicineModal";
 
 import {
   medicines as initialMedicines,
   medicineCategories,
-  getMedicineStock,
-  getStockStatus,
-  getMedicineValue,
-  getMedicineCostValue,
-  getExpiryStatus,
-  formatCurrency,
 } from "@/data/inventory";
 
 const PAGE_SIZE = 6;
 
-function StatCard({ title, value, description, icon: Icon, color }) {
-  const colors = {
-    violet: "bg-violet-500/10 text-violet-300 ring-violet-400/10",
-    amber: "bg-amber-500/10 text-amber-300 ring-amber-400/10",
-    rose: "bg-rose-500/10 text-rose-300 ring-rose-400/10",
-    emerald: "bg-emerald-500/10 text-emerald-300 ring-emerald-400/10",
-  };
+// Format prices in Tanzanian Shillings.
+const formatMoney = (amount) =>
+  new Intl.NumberFormat("en-TZ", {
+    style: "currency",
+    currency: "TZS",
+    maximumFractionDigits: 0,
+  }).format(Number(amount) || 0);
 
-  return (
-    <div className="glass-card rounded-2xl border border-white/10 p-5 transition duration-300 hover:-translate-y-1 hover:border-white/20">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm text-white/50">{title}</p>
-          <h3 className="mt-2 text-2xl font-bold tracking-tight text-white">
-            {value}
-          </h3>
-          <p className="mt-2 text-xs text-white/40">{description}</p>
-        </div>
-
-        <div className={`rounded-xl p-3 ring-1 ${colors[color]}`}>
-          <Icon size={21} />
-        </div>
-      </div>
-    </div>
+// Calculate the total quantity across all medicine batches.
+const getStock = (medicine) =>
+  (medicine.batches || []).reduce(
+    (total, batch) => total + Number(batch.quantity || 0),
+    0
   );
-}
 
-function StatusBadge({ status }) {
-  const styles = {
-    "In Stock": "bg-emerald-400/10 text-emerald-300 border-emerald-400/20",
-    "Low Stock": "bg-amber-400/10 text-amber-300 border-amber-400/20",
-    "Out of Stock": "bg-rose-400/10 text-rose-300 border-rose-400/20",
-  };
+// Determine the current stock status.
+const getStockStatus = (medicine) => {
+  const quantity = getStock(medicine);
 
-  return (
-    <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium ${styles[status]}`}>
-      {status}
-    </span>
+  if (quantity === 0) return "Out of Stock";
+
+  if (quantity <= Number(medicine.reorderLevel)) {
+    return "Low Stock";
+  }
+
+  return "In Stock";
+};
+
+// Calculate days remaining before expiry.
+// The current date is passed in from component state.
+const getDaysUntilExpiry = (expiryDate, today) => {
+  if (!today || !expiryDate) return null;
+
+  const expiry = new Date(expiryDate);
+
+  if (Number.isNaN(expiry.getTime())) return null;
+
+  expiry.setHours(0, 0, 0, 0);
+
+  return Math.ceil(
+    (expiry.getTime() - today) / (1000 * 60 * 60 * 24)
   );
-}
+};
 
-function ExpiryBadge({ date }) {
-  const status = getExpiryStatus(date);
+// Determine the expiry status of a batch.
+const getExpiryStatus = (expiryDate, today) => {
+  const days = getDaysUntilExpiry(expiryDate, today);
 
-  const styles = {
-    Valid: "text-emerald-300",
-    "Expiring Soon": "text-amber-300",
-    Expired: "text-rose-300",
-  };
+  if (days === null) return "Unknown";
+  if (days < 0) return "Expired";
+  if (days <= 90) return "Expiring Soon";
 
-  return (
-    <span className={`text-xs font-medium ${styles[status]}`}>
-      {status}
-    </span>
-  );
-}
+  return "Valid";
+};
 
-function LoadingRows() {
-  return (
-    <div className="space-y-4 p-5">
-      {Array.from({ length: 5 }).map((_, index) => (
-        <div key={index} className="flex animate-pulse items-center gap-4">
-          <div className="h-10 w-10 rounded-xl bg-white/10" />
-          <div className="flex-1 space-y-2">
-            <div className="h-3 w-1/3 rounded bg-white/10" />
-            <div className="h-2 w-1/4 rounded bg-white/5" />
-          </div>
-          <div className="hidden h-5 w-20 rounded-full bg-white/10 sm:block" />
-          <div className="h-4 w-16 rounded bg-white/10" />
-        </div>
-      ))}
-    </div>
-  );
-}
+// Count medicines containing batches that expire within 90 days.
+const getExpiringSoonCount = (items, today) => {
+  if (!today) return 0;
+
+  return items.filter((medicine) =>
+    (medicine.batches || []).some(
+      (batch) =>
+        getExpiryStatus(batch.expiryDate, today) === "Expiring Soon"
+    )
+  ).length;
+};
+
+// Stock status colors.
+const getStatusClasses = (status) => {
+  switch (status) {
+    case "In Stock":
+      return "border-emerald-500/20 bg-emerald-500/10 text-emerald-400";
+
+    case "Low Stock":
+      return "border-amber-500/20 bg-amber-500/10 text-amber-400";
+
+    case "Out of Stock":
+      return "border-red-500/20 bg-red-500/10 text-red-400";
+
+    default:
+      return "border-white/10 bg-white/5 text-muted";
+  }
+};
+
+// Expiry status colors.
+const getExpiryClasses = (status) => {
+  switch (status) {
+    case "Valid":
+      return "bg-emerald-500/10 text-emerald-400";
+
+    case "Expiring Soon":
+      return "bg-amber-500/10 text-amber-400";
+
+    case "Expired":
+      return "bg-red-500/10 text-red-400";
+
+    default:
+      return "bg-white/5 text-muted";
+  }
+};
+
+// Format expiry dates for display.
+const formatDate = (date) => {
+  if (!date) return "Not specified";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "Invalid date";
+  }
+
+  return parsedDate.toLocaleDateString("en-GB");
+};
 
 export default function InventoryPageContent() {
   const [medicines, setMedicines] = useState(initialMedicines);
+
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All Categories");
   const [stockFilter, setStockFilter] = useState("All Stock");
+
   const [currentPage, setCurrentPage] = useState(1);
-  const [modalOpen, setModalOpen] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
+
+  const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Simulate initial data loading.
+  // Store the browser's current date after mounting.
+  // This prevents Next.js from evaluating new Date()
+  // during static prerendering.
+  const [today, setToday] = useState(null);
+
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 650);
+    const currentDate = new Date();
+
+    currentDate.setHours(0, 0, 0, 0);
+
+    setToday(currentDate.getTime());
+  }, []);
+
+  // Simulate the initial loading process.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 650);
+
     return () => clearTimeout(timer);
   }, []);
 
-  // Calculate inventory summary values.
-  const summary = useMemo(() => {
+  // Calculate inventory dashboard statistics.
+  const statistics = useMemo(() => {
+    const totalProducts = medicines.length;
+
     const totalUnits = medicines.reduce(
-      (total, medicine) => total + getMedicineStock(medicine),
+      (total, medicine) => total + getStock(medicine),
       0
     );
 
@@ -140,54 +197,61 @@ export default function InventoryPageContent() {
       (medicine) => getStockStatus(medicine) === "Out of Stock"
     ).length;
 
-    const expiringSoon = medicines.reduce((total, medicine) => {
-      return total + medicine.batches.filter(
-        (batch) =>
-          batch.quantity > 0 && getExpiryStatus(batch.expiryDate) === "Expiring Soon"
-      ).length;
-    }, 0);
+    const expiringSoon = getExpiringSoonCount(medicines, today);
 
     const sellingValue = medicines.reduce(
-      (total, medicine) => total + getMedicineValue(medicine),
+      (total, medicine) =>
+        total +
+        getStock(medicine) * Number(medicine.sellingPrice || 0),
       0
     );
 
-    const costValue = medicines.reduce(
-      (total, medicine) => total + getMedicineCostValue(medicine),
+    const purchaseValue = medicines.reduce(
+      (total, medicine) =>
+        total +
+        getStock(medicine) * Number(medicine.purchasePrice || 0),
       0
     );
 
     return {
-      totalProducts: medicines.length,
+      totalProducts,
       totalUnits,
       lowStock,
       outOfStock,
       expiringSoon,
       sellingValue,
-      costValue,
+      purchaseValue,
     };
-  }, [medicines]);
+  }, [medicines, today]);
 
-  // Search and filter medicines.
+  // Search and filter the medicine list.
   const filteredMedicines = useMemo(() => {
     return medicines.filter((medicine) => {
-      const searchTerm = search.toLowerCase();
+      const searchTerm = search.toLowerCase().trim();
 
-      const matchesSearch = [
-        medicine.name,
-        medicine.genericName,
-        medicine.sku,
-        medicine.category,
-        medicine.manufacturer,
-        ...medicine.batches.map((batch) => batch.batchNumber),
-      ]
-        .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(searchTerm));
+      const matchesSearch =
+        !searchTerm ||
+        [
+          medicine.name,
+          medicine.genericName,
+          medicine.sku,
+          medicine.category,
+          medicine.manufacturer,
+          ...(medicine.batches || []).map(
+            (batch) => batch.batchNumber
+          ),
+        ]
+          .filter(Boolean)
+          .some((value) =>
+            String(value).toLowerCase().includes(searchTerm)
+          );
 
       const matchesCategory =
-        category === "All Categories" || medicine.category === category;
+        category === "All Categories" ||
+        medicine.category === category;
 
       const status = getStockStatus(medicine);
+
       const matchesStock =
         stockFilter === "All Stock" || status === stockFilter;
 
@@ -195,7 +259,7 @@ export default function InventoryPageContent() {
     });
   }, [medicines, search, category, stockFilter]);
 
-  // Keep the current page valid when filters change.
+  // Reset pagination when search or filters change.
   useEffect(() => {
     setCurrentPage(1);
   }, [search, category, stockFilter]);
@@ -210,97 +274,116 @@ export default function InventoryPageContent() {
     currentPage * PAGE_SIZE
   );
 
-  const handleAddMedicine = (newMedicine) => {
-    setMedicines((current) => [newMedicine, ...current]);
+  // Add a medicine created through the modal.
+  function handleAddMedicine(newMedicine) {
+    setMedicines((current) => [
+      {
+        ...newMedicine,
+        id: newMedicine.id || `MED-${Date.now()}`,
+        batches: newMedicine.batches || [],
+      },
+      ...current,
+    ]);
+
     setModalOpen(false);
-    setSearch("");
-    setCategory("All Categories");
-    setStockFilter("All Stock");
-    setCurrentPage(1);
-  };
+  }
 
-  const resetFilters = () => {
-    setSearch("");
-    setCategory("All Categories");
-    setStockFilter("All Stock");
-  };
+  // Expand or collapse batch details.
+  function toggleExpanded(id) {
+    setExpandedId((current) => (current === id ? null : id));
+  }
 
-  const exportInventory = () => {
+  // Export currently filtered medicines to CSV.
+  function exportCSV() {
     const headers = [
-      "SKU",
-      "Medicine",
+      "Medicine Name",
       "Generic Name",
+      "SKU",
       "Category",
-      "Stock",
+      "Manufacturer",
+      "Quantity",
       "Reorder Level",
       "Purchase Price",
       "Selling Price",
-      "Selling Value",
-      "Status",
+      "Stock Status",
     ];
 
     const rows = filteredMedicines.map((medicine) => [
-      medicine.sku,
       medicine.name,
       medicine.genericName,
+      medicine.sku,
       medicine.category,
-      getMedicineStock(medicine),
+      medicine.manufacturer,
+      getStock(medicine),
       medicine.reorderLevel,
       medicine.purchasePrice,
       medicine.sellingPrice,
-      getMedicineValue(medicine),
       getStockStatus(medicine),
     ]);
 
-    const csv = [headers, ...rows]
+    const csvContent = [headers, ...rows]
       .map((row) =>
-        row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(",")
+        row
+          .map(
+            (value) =>
+              `"${String(value ?? "").replace(/"/g, '""')}"`
+          )
+          .join(",")
       )
       .join("\n");
 
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob([csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
 
     link.href = url;
     link.download = "mediflow-inventory.csv";
+
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
 
     URL.revokeObjectURL(url);
-  };
+  }
+
+  // Reset all filters.
+  function clearFilters() {
+    setSearch("");
+    setCategory("All Categories");
+    setStockFilter("All Stock");
+  }
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6">
+
       {/* Page heading */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="mb-2 flex items-center gap-2 text-xs text-white/40">
-            <span>Pharmacy</span>
-            <span>/</span>
-            <span className="text-violet-300">Inventory</span>
-          </div>
-
-          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+          <h1 className="text-2xl font-bold text-foreground">
             Inventory Management
           </h1>
 
-          <p className="mt-1 text-sm text-white/45">
-            Manage medicines, stock levels and expiry dates.
+          <p className="mt-1 text-sm text-muted">
+            Manage medicines, monitor stock levels and track expiry dates.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-3">
           <button
-            onClick={exportInventory}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white/75 transition hover:bg-white/10"
+            onClick={exportCSV}
+            disabled={filteredMedicines.length === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-foreground transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <ArrowDownToLine size={17} />
+            <Download size={17} />
             Export CSV
           </button>
 
           <button
             onClick={() => setModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-900/20 transition hover:bg-violet-500"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
           >
             <Plus size={18} />
             Add Medicine
@@ -308,337 +391,525 @@ export default function InventoryPageContent() {
         </div>
       </div>
 
-      {/* Summary cards */}
+      {/* Inventory statistics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          title="Total Products"
-          value={summary.totalProducts}
-          description={`${summary.totalUnits.toLocaleString()} total units in stock`}
+          title="Total Medicines"
+          value={statistics.totalProducts}
+          description={`${statistics.totalUnits.toLocaleString()} total units`}
           icon={Package}
-          color="violet"
+          iconStyle="bg-blue-500/10 text-blue-400"
         />
 
         <StatCard
           title="Low Stock"
-          value={summary.lowStock}
-          description="Products below reorder level"
+          value={statistics.lowStock}
+          description="Medicines below reorder level"
           icon={AlertTriangle}
-          color="amber"
+          iconStyle="bg-amber-500/10 text-amber-400"
         />
 
         <StatCard
           title="Out of Stock"
-          value={summary.outOfStock}
-          description="Products requiring replenishment"
+          value={statistics.outOfStock}
+          description="Medicines requiring restocking"
           icon={XCircle}
-          color="rose"
+          iconStyle="bg-red-500/10 text-red-400"
         />
 
         <StatCard
           title="Expiring Soon"
-          value={summary.expiringSoon}
-          description="Batches expiring within 90 days"
-          icon={CalendarClock}
-          color="emerald"
+          value={statistics.expiringSoon}
+          description="Medicines with batches expiring within 90 days"
+          icon={CalendarDays}
+          iconStyle="bg-violet-500/10 text-violet-400"
         />
       </div>
 
-      {/* Inventory valuation */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-violet-400/15 bg-gradient-to-br from-violet-500/15 to-indigo-500/5 p-5">
-          <div className="flex items-center gap-2 text-sm text-white/55">
-            <Boxes size={17} />
-            Inventory selling value
-          </div>
-          <p className="mt-3 text-2xl font-bold text-white sm:text-3xl">
-            {formatCurrency(summary.sellingValue)}
+      {/* Inventory value */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="glass-card rounded-2xl p-5">
+          <p className="text-sm text-muted">
+            Inventory Selling Value
           </p>
-          <p className="mt-1 text-xs text-white/40">
-            Value of current stock at selling prices
+
+          <h2 className="mt-2 text-2xl font-bold text-foreground">
+            {formatMoney(statistics.sellingValue)}
+          </h2>
+
+          <p className="mt-2 text-xs text-muted">
+            Estimated value of available stock at selling prices.
           </p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="flex items-center gap-2 text-sm text-white/55">
-            <Package size={17} />
-            Inventory cost value
-          </div>
-          <p className="mt-3 text-2xl font-bold text-white sm:text-3xl">
-            {formatCurrency(summary.costValue)}
+        <div className="glass-card rounded-2xl p-5">
+          <p className="text-sm text-muted">
+            Inventory Purchase Value
           </p>
-          <p className="mt-1 text-xs text-white/40">
-            Value of current stock at purchase prices
+
+          <h2 className="mt-2 text-2xl font-bold text-foreground">
+            {formatMoney(statistics.purchaseValue)}
+          </h2>
+
+          <p className="mt-2 text-xs text-muted">
+            Estimated cost of available stock at purchase prices.
           </p>
         </div>
       </div>
 
-      {/* Medicine catalogue */}
-      <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025] shadow-xl shadow-black/10">
-        <div className="flex flex-col gap-4 border-b border-white/10 p-5 lg:flex-row lg:items-center lg:justify-between">
+      {/* Search and filters */}
+      <div className="glass-card space-y-4 rounded-2xl p-5">
+        <div className="flex items-center gap-2">
+          <Filter size={17} className="text-muted" />
+
+          <h2 className="text-sm font-semibold text-foreground">
+            Search and Filter
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          <div className="relative">
+            <Search
+              size={18}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-muted"
+            />
+
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search medicine, SKU, batch..."
+              className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-11 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-blue-500"
+            />
+          </div>
+
+          <select
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+            className="w-full rounded-xl border border-white/10 bg-[#111827] px-4 py-3 text-sm text-foreground outline-none focus:border-blue-500"
+          >
+            <option value="All Categories">All Categories</option>
+
+            {medicineCategories.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={stockFilter}
+            onChange={(event) => setStockFilter(event.target.value)}
+            className="w-full rounded-xl border border-white/10 bg-[#111827] px-4 py-3 text-sm text-foreground outline-none focus:border-blue-500"
+          >
+            <option value="All Stock">All Stock Statuses</option>
+            <option value="In Stock">In Stock</option>
+            <option value="Low Stock">Low Stock</option>
+            <option value="Out of Stock">Out of Stock</option>
+          </select>
+        </div>
+
+        {(search ||
+          category !== "All Categories" ||
+          stockFilter !== "All Stock") && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-muted">
+              Showing {filteredMedicines.length} matching medicines
+            </p>
+
+            <button
+              onClick={clearFilters}
+              className="inline-flex items-center gap-2 text-xs font-medium text-blue-400 hover:text-blue-300"
+            >
+              <RefreshCw size={13} />
+              Clear filters
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Medicine table */}
+      <div className="glass-card overflow-hidden rounded-2xl">
+        <div className="flex flex-col gap-2 border-b border-white/5 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="font-semibold text-white">Medicine catalogue</h2>
-            <p className="mt-1 text-xs text-white/40">
-              Browse and manage your pharmacy products.
+            <h2 className="font-semibold text-foreground">
+              Medicine Inventory
+            </h2>
+
+            <p className="mt-1 text-xs text-muted">
+              Select a medicine name to view its complete details.
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative min-w-0 sm:w-64">
-              <Search
-                size={17}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35"
-              />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search medicine, SKU, batch..."
-                className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-10 pr-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-violet-400/60"
-              />
-            </div>
-
-            <div className="relative">
-              <SlidersHorizontal
-                size={15}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
-              />
-              <select
-                value={category}
-                onChange={(event) => setCategory(event.target.value)}
-                className="w-full appearance-none rounded-xl border border-white/10 bg-[#151c2b] py-2.5 pl-9 pr-9 text-sm text-white/75 outline-none focus:border-violet-400/60 sm:w-48"
-              >
-                <option value="All Categories">All Categories</option>
-                {medicineCategories.map((item) => (
-                  <option key={item} value={item}>{item}</option>
-                ))}
-              </select>
-              <ChevronDown
-                size={15}
-                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/40"
-              />
-            </div>
-
-            <select
-              value={stockFilter}
-              onChange={(event) => setStockFilter(event.target.value)}
-              className="rounded-xl border border-white/10 bg-[#151c2b] px-3 py-2.5 text-sm text-white/75 outline-none focus:border-violet-400/60"
-            >
-              <option value="All Stock">All Stock</option>
-              <option value="In Stock">In Stock</option>
-              <option value="Low Stock">Low Stock</option>
-              <option value="Out of Stock">Out of Stock</option>
-            </select>
-          </div>
+          <span className="w-fit rounded-lg bg-white/5 px-3 py-1.5 text-xs text-muted">
+            {filteredMedicines.length} medicines
+          </span>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left">
-            <thead className="bg-white/[0.025]">
-              <tr className="text-xs uppercase tracking-wider text-white/35">
-                <th className="px-5 py-4 font-medium">Medicine</th>
-                <th className="px-5 py-4 font-medium">Category</th>
-                <th className="px-5 py-4 font-medium">Stock</th>
-                <th className="px-5 py-4 font-medium">Purchase price</th>
-                <th className="px-5 py-4 font-medium">Selling price</th>
-                <th className="px-5 py-4 font-medium">Stock value</th>
-                <th className="px-5 py-4 font-medium">Status</th>
-                <th className="px-5 py-4 font-medium">Details</th>
-              </tr>
-            </thead>
+        {loading ? (
+          <LoadingRows />
+        ) : filteredMedicines.length === 0 ? (
+          <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
+            <div className="rounded-2xl bg-white/5 p-4 text-muted">
+              <Pill size={30} />
+            </div>
 
-            <tbody className="divide-y divide-white/[0.06]">
-              {loading ? (
-                <tr>
-                  <td colSpan="8">
-                    <LoadingRows />
-                  </td>
-                </tr>
-              ) : paginatedMedicines.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="px-5 py-16 text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-white/40">
-                      <Search size={22} />
-                    </div>
-                    <p className="mt-3 font-medium text-white">
-                      No medicines found
-                    </p>
-                    <p className="mt-1 text-sm text-white/40">
-                      Try changing your search or filters.
-                    </p>
-                    <button
-                      onClick={resetFilters}
-                      className="mt-4 inline-flex items-center gap-2 text-sm text-violet-300 hover:text-violet-200"
-                    >
-                      <RefreshCw size={14} />
-                      Clear filters
-                    </button>
-                  </td>
-                </tr>
-              ) : (
-                paginatedMedicines.map((medicine) => {
-                  const stock = getMedicineStock(medicine);
-                  const status = getStockStatus(medicine);
-                  const expanded = expandedId === medicine.id;
+            <h3 className="mt-4 font-semibold text-foreground">
+              No medicines found
+            </h3>
 
-                  return (
-                    <tbody key={medicine.id} className="contents">
-                      <tr className="transition hover:bg-white/[0.025]">
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 text-violet-300">
-                              <Pill size={19} />
-                            </div>
-                            <div>
-                              <p className="font-medium text-white">
-                                {medicine.name}
-                              </p>
-                              <p className="mt-0.5 text-xs text-white/40">
-                                {medicine.strength} · {medicine.dosageForm} · {medicine.sku}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
+            <p className="mt-2 max-w-sm text-sm text-muted">
+              Try changing your search or filters to find the medicine
+              you're looking for.
+            </p>
 
-                        <td className="px-5 py-4 text-sm text-white/60">
-                          {medicine.category}
-                        </td>
+            <button
+              onClick={clearFilters}
+              className="mt-5 text-sm font-medium text-blue-400 hover:text-blue-300"
+            >
+              Clear all filters
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[850px] text-left text-sm">
+                <thead className="bg-white/[0.02] text-xs uppercase text-muted">
+                  <tr>
+                    <th className="px-5 py-4 font-medium">Medicine</th>
+                    <th className="px-5 py-4 font-medium">Category</th>
+                    <th className="px-5 py-4 font-medium">Stock</th>
+                    <th className="px-5 py-4 font-medium">Purchase Price</th>
+                    <th className="px-5 py-4 font-medium">Selling Price</th>
+                    <th className="px-5 py-4 font-medium">Status</th>
+                    <th className="px-5 py-4 text-right font-medium">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
 
-                        <td className="px-5 py-4">
-                          <p className="font-semibold text-white">
-                            {stock.toLocaleString()}
-                          </p>
-                          <p className="mt-0.5 text-xs text-white/35">
-                            Reorder at {medicine.reorderLevel}
-                          </p>
-                        </td>
+                <tbody className="divide-y divide-white/5">
+                  {paginatedMedicines.map((medicine) => {
+                    const quantity = getStock(medicine);
+                    const status = getStockStatus(medicine);
+                    const isExpanded = expandedId === medicine.id;
 
-                        <td className="px-5 py-4 text-sm text-white/60">
-                          {formatCurrency(medicine.purchasePrice)}
-                        </td>
+                    return (
+                      <Fragment key={medicine.id}>
+                        <tr className="transition hover:bg-white/[0.02]">
 
-                        <td className="px-5 py-4 text-sm text-white/60">
-                          {formatCurrency(medicine.sellingPrice)}
-                        </td>
+                          {/* Medicine name */}
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400">
+                                <Pill size={19} />
+                              </div>
 
-                        <td className="px-5 py-4 text-sm font-medium text-white">
-                          {formatCurrency(getMedicineValue(medicine))}
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <StatusBadge status={status} />
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <button
-                            onClick={() =>
-                              setExpandedId(expanded ? null : medicine.id)
-                            }
-                            className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-violet-300 transition hover:bg-violet-400/10"
-                          >
-                            {expanded ? "Hide" : "Batches"}
-                            <ChevronDown
-                              size={14}
-                              className={`transition ${expanded ? "rotate-180" : ""}`}
-                            />
-                          </button>
-                        </td>
-                      </tr>
-
-                      {expanded && (
-                        <tr>
-                          <td colSpan="8" className="bg-white/[0.025] px-5 py-4">
-                            <div className="mb-3 flex flex-wrap justify-between gap-2">
                               <div>
-                                <p className="text-sm font-semibold text-white">
-                                  Batch information
+                                <Link
+                                  href={`/inventory/${medicine.id}`}
+                                  className="font-medium text-foreground transition hover:text-blue-400"
+                                >
+                                  {medicine.name}
+                                </Link>
+
+                                <p className="mt-1 text-xs text-muted">
+                                  {medicine.genericName}
                                 </p>
-                                <p className="mt-1 text-xs text-white/40">
-                                  {medicine.manufacturer || "Manufacturer not specified"}
+
+                                <p className="mt-1 text-[11px] text-muted">
+                                  SKU: {medicine.sku}
                                 </p>
                               </div>
-                              <span className="text-xs text-white/40">
-                                {medicine.batches.length} batch(es)
-                              </span>
                             </div>
+                          </td>
 
-                            <div className="overflow-x-auto">
-                              <table className="w-full min-w-[500px] text-left">
-                                <thead>
-                                  <tr className="text-xs text-white/35">
-                                    <th className="py-2 pr-4 font-medium">Batch number</th>
-                                    <th className="py-2 pr-4 font-medium">Quantity</th>
-                                    <th className="py-2 pr-4 font-medium">Expiry date</th>
-                                    <th className="py-2 font-medium">Expiry status</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {medicine.batches.map((batch) => (
-                                    <tr key={batch.batchNumber} className="border-t border-white/[0.06] text-sm">
-                                      <td className="py-3 pr-4 text-white/75">{batch.batchNumber}</td>
-                                      <td className="py-3 pr-4 text-white/75">{batch.quantity.toLocaleString()}</td>
-                                      <td className="py-3 pr-4 text-white/55">
-                                        {new Date(`${batch.expiryDate}T00:00:00`).toLocaleDateString("en-GB")}
-                                      </td>
-                                      <td className="py-3">
-                                        <ExpiryBadge date={batch.expiryDate} />
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                          {/* Category */}
+                          <td className="px-5 py-4 text-muted">
+                            {medicine.category}
+                          </td>
+
+                          {/* Stock quantity */}
+                          <td className="px-5 py-4">
+                            <p className="font-semibold text-foreground">
+                              {quantity.toLocaleString()} units
+                            </p>
+
+                            <p className="mt-1 text-xs text-muted">
+                              Reorder at {medicine.reorderLevel}
+                            </p>
+                          </td>
+
+                          {/* Purchase price */}
+                          <td className="px-5 py-4 text-muted">
+                            {formatMoney(medicine.purchasePrice)}
+                          </td>
+
+                          {/* Selling price */}
+                          <td className="px-5 py-4 font-medium text-foreground">
+                            {formatMoney(medicine.sellingPrice)}
+                          </td>
+
+                          {/* Stock status */}
+                          <td className="px-5 py-4">
+                            <span
+                              className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${getStatusClasses(status)}`}
+                            >
+                              {status}
+                            </span>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="px-5 py-4">
+                            <div className="flex items-center justify-end gap-2">
+                              <Link
+                                href={`/inventory/${medicine.id}`}
+                                title="View medicine details"
+                                className="rounded-lg border border-white/10 p-2 text-muted transition hover:border-blue-500/30 hover:bg-blue-500/10 hover:text-blue-400"
+                              >
+                                <Eye size={16} />
+                              </Link>
+
+                              <button
+                                onClick={() =>
+                                  toggleExpanded(medicine.id)
+                                }
+                                title="View batches"
+                                className="rounded-lg border border-white/10 p-2 text-muted transition hover:bg-white/10 hover:text-foreground"
+                              >
+                                {isExpanded ? (
+                                  <ChevronUp size={16} />
+                                ) : (
+                                  <ChevronDown size={16} />
+                                )}
+                              </button>
                             </div>
                           </td>
                         </tr>
-                      )}
-                    </tbody>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+
+                        {/* Expanded batch information */}
+                        {isExpanded && (
+                          <tr>
+                            <td
+                              colSpan={7}
+                              className="bg-white/[0.015] px-5 py-5"
+                            >
+                              <div className="space-y-3">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <h3 className="text-sm font-semibold text-foreground">
+                                    Batch Information
+                                  </h3>
+
+                                  <span className="text-xs text-muted">
+                                    {(medicine.batches || []).length} batches
+                                  </span>
+                                </div>
+
+                                {(medicine.batches || []).length === 0 ? (
+                                  <p className="text-sm text-muted">
+                                    No batches have been recorded for this medicine.
+                                  </p>
+                                ) : (
+                                  <div className="overflow-x-auto">
+                                    <table className="w-full min-w-[550px] text-left text-xs">
+                                      <thead className="text-muted">
+                                        <tr>
+                                          <th className="px-3 py-3 font-medium">
+                                            Batch Number
+                                          </th>
+
+                                          <th className="px-3 py-3 font-medium">
+                                            Quantity
+                                          </th>
+
+                                          <th className="px-3 py-3 font-medium">
+                                            Expiry Date
+                                          </th>
+
+                                          <th className="px-3 py-3 font-medium">
+                                            Expiry Status
+                                          </th>
+                                        </tr>
+                                      </thead>
+
+                                      <tbody className="divide-y divide-white/5">
+                                        {(medicine.batches || []).map(
+                                          (batch, index) => {
+                                            const expiryStatus = today
+                                              ? getExpiryStatus(
+                                                  batch.expiryDate,
+                                                  today
+                                                )
+                                              : "Unknown";
+
+                                            return (
+                                              <tr
+                                                key={`${batch.batchNumber}-${index}`}
+                                              >
+                                                <td className="px-3 py-3 font-medium text-foreground">
+                                                  {batch.batchNumber}
+                                                </td>
+
+                                                <td className="px-3 py-3 text-muted">
+                                                  {Number(
+                                                    batch.quantity
+                                                  ).toLocaleString()}{" "}
+                                                  units
+                                                </td>
+
+                                                <td className="px-3 py-3 text-muted">
+                                                  {formatDate(
+                                                    batch.expiryDate
+                                                  )}
+                                                </td>
+
+                                                <td className="px-3 py-3">
+                                                  <span
+                                                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${getExpiryClasses(expiryStatus)}`}
+                                                  >
+                                                    {expiryStatus}
+                                                  </span>
+                                                </td>
+                                              </tr>
+                                            );
+                                          }
+                                        )}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
+
+                                <div className="pt-2">
+                                  <Link
+                                    href={`/inventory/${medicine.id}`}
+                                    className="inline-flex items-center gap-2 text-xs font-medium text-blue-400 hover:text-blue-300"
+                                  >
+                                    View complete medicine details
+                                    <ChevronRight size={14} />
+                                  </Link>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex flex-col gap-3 border-t border-white/5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted">
+                Showing{" "}
+                {filteredMedicines.length === 0
+                  ? 0
+                  : (currentPage - 1) * PAGE_SIZE + 1}
+                {" "}to{" "}
+                {Math.min(
+                  currentPage * PAGE_SIZE,
+                  filteredMedicines.length
+                )}
+                {" "}of {filteredMedicines.length} medicines
+              </p>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() =>
+                    setCurrentPage((page) => Math.max(1, page - 1))
+                  }
+                  disabled={currentPage === 1}
+                  className="rounded-lg border border-white/10 p-2 text-muted transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-30"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={17} />
+                </button>
+
+                <span className="px-3 text-xs text-muted">
+                  Page {currentPage} of {totalPages}
+                </span>
+
+                <button
+                  onClick={() =>
+                    setCurrentPage((page) =>
+                      Math.min(totalPages, page + 1)
+                    )
+                  }
+                  disabled={currentPage === totalPages}
+                  className="rounded-lg border border-white/10 p-2 text-muted transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-30"
+                  aria-label="Next page"
+                >
+                  <ChevronRight size={17} />
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Add medicine modal */}
+      {modalOpen && (
+        <MedicineModal
+          onClose={() => setModalOpen(false)}
+          onSave={handleAddMedicine}
+        />
+      )}
+    </div>
+  );
+}
+
+// Reusable statistics card.
+function StatCard({
+  title,
+  value,
+  description,
+  icon: Icon,
+  iconStyle,
+}) {
+  return (
+    <div className="glass-card rounded-2xl p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm text-muted">{title}</p>
+
+          <h3 className="mt-3 text-2xl font-bold text-foreground">
+            {value}
+          </h3>
         </div>
 
-        {/* Pagination */}
-        {!loading && filteredMedicines.length > 0 && (
-          <div className="flex flex-col gap-3 border-t border-white/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-white/40">
-              Showing{" "}
-              {Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredMedicines.length)}
-              {" "}to{" "}
-              {Math.min(currentPage * PAGE_SIZE, filteredMedicines.length)}
-              {" "}of {filteredMedicines.length} medicines
-            </p>
+        <div className={`rounded-xl p-3 ${iconStyle}`}>
+          <Icon size={21} />
+        </div>
+      </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((page) => page - 1)}
-                className="rounded-lg border border-white/10 p-2 text-white/60 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-30"
-              >
-                <ChevronLeft size={17} />
-              </button>
+      <p className="mt-3 text-xs text-muted">
+        {description}
+      </p>
+    </div>
+  );
+}
 
-              <span className="px-3 text-xs text-white/60">
-                Page {currentPage} of {totalPages}
-              </span>
+// Loading placeholder displayed while inventory loads.
+function LoadingRows() {
+  return (
+    <div className="space-y-4 p-5">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div
+          key={index}
+          className="flex animate-pulse items-center gap-4"
+        >
+          <div className="h-10 w-10 rounded-xl bg-white/10" />
 
-              <button
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((page) => page + 1)}
-                className="rounded-lg border border-white/10 p-2 text-white/60 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-30"
-              >
-                <ChevronRight size={17} />
-              </button>
-            </div>
+          <div className="flex-1 space-y-2">
+            <div className="h-3 w-40 rounded bg-white/10" />
+            <div className="h-2.5 w-24 rounded bg-white/5" />
           </div>
-        )}
-      </section>
 
-      <MedicineModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSave={handleAddMedicine}
-      />
+          <div className="hidden h-8 w-20 rounded-lg bg-white/5 sm:block" />
+          <div className="hidden h-8 w-20 rounded-lg bg-white/5 md:block" />
+        </div>
+      ))}
     </div>
   );
 }
