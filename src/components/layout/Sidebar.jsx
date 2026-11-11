@@ -1,4 +1,9 @@
 
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,11 +20,71 @@ import {
 export default function Sidebar({
   collapsed,
   onToggle,
-  activeItem,
   onNavigate,
   mobileOpen,
   onClose,
 }) {
+  const pathname = usePathname();
+
+  // Check whether a navigation link matches the current page.
+  const isActive = (href) => {
+    if (!href) return false;
+
+    if (href === "/") {
+      return pathname === "/";
+    }
+
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
+
+  // Close the mobile sidebar after navigation.
+  const handleNavigation = (label) => {
+    if (onNavigate) {
+      onNavigate(label);
+    }
+
+    if (onClose) {
+      onClose();
+    }
+  };
+
+  const renderNavigationItem = (item) => {
+    const Icon = item.icon;
+    const active = isActive(item.href);
+
+    return (
+      <Link
+        key={item.label}
+        href={item.href || "/"}
+        title={collapsed ? item.label : undefined}
+        onClick={() => handleNavigation(item.label)}
+        className={`
+          group relative flex w-full items-center gap-3
+          rounded-xl px-3 py-3 text-left
+          transition-all duration-200
+          ${
+            active
+              ? "bg-violet-500/15 text-violet-300"
+              : "text-gray-400 hover:bg-white/[0.05] hover:text-white"
+          }
+          ${collapsed ? "justify-center" : ""}
+        `}
+      >
+        {active && (
+          <span className="absolute bottom-2 left-0 top-2 w-[3px] rounded-full bg-violet-400" />
+        )}
+
+        <Icon size={19} className="shrink-0" />
+
+        {!collapsed && (
+          <span className="text-[13px] font-medium">
+            {item.label}
+          </span>
+        )}
+      </Link>
+    );
+  };
+
   return (
     <>
       {/* Mobile backdrop */}
@@ -38,19 +103,27 @@ export default function Sidebar({
           transition-all duration-300 ease-in-out
           ${collapsed ? "lg:w-[84px]" : "lg:w-[260px]"}
           w-[260px]
-          ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          ${
+            mobileOpen
+              ? "translate-x-0"
+              : "-translate-x-full lg:translate-x-0"
+          }
         `}
       >
         {/* Brand */}
         <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-white/10 px-5">
-          <div className="flex items-center gap-3 overflow-hidden">
+          <Link
+            href="/"
+            onClick={() => handleNavigation("Dashboard")}
+            className="flex items-center gap-3 overflow-hidden"
+          >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-cyan-500 shadow-lg shadow-violet-500/20">
               <Pill className="h-5 w-5 text-white" />
             </div>
 
             {!collapsed && (
               <div className="whitespace-nowrap">
-                <h1 className="text-lg font-bold tracking-tight">
+                <h1 className="text-lg font-bold tracking-tight text-white">
                   Medi<span className="gradient-text">Flow</span>
                 </h1>
 
@@ -59,7 +132,7 @@ export default function Sidebar({
                 </p>
               </div>
             )}
-          </div>
+          </Link>
 
           {/* Mobile close button */}
           <button
@@ -96,6 +169,7 @@ export default function Sidebar({
                 <p className="truncate text-xs font-semibold text-white">
                   HealthPlus Pharmacy
                 </p>
+
                 <p className="mt-1 text-[10px] text-muted">
                   Retail account
                 </p>
@@ -104,7 +178,7 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* Navigation */}
+        {/* Main navigation */}
         <nav className="flex-1 space-y-7 overflow-y-auto px-3 py-7">
           {navigationGroups.map((group) => (
             <div key={group.title}>
@@ -115,47 +189,7 @@ export default function Sidebar({
               )}
 
               <div className="space-y-1">
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-                  const active = activeItem === item.label;
-
-                  return (
-                    <button
-                      key={item.label}
-                      title={collapsed ? item.label : undefined}
-                      onClick={() => {
-                        onNavigate(item.label);
-                        onClose();
-                      }}
-                      className={`
-                        group relative flex w-full items-center gap-3
-                        rounded-xl px-3 py-3 text-left
-                        transition-all duration-200
-                        ${
-                          active
-                            ? "bg-violet-500/15 text-violet-300"
-                            : "text-gray-400 hover:bg-white/[0.05] hover:text-white"
-                        }
-                        ${collapsed ? "justify-center" : ""}
-                      `}
-                    >
-                      {active && (
-                        <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-violet-400" />
-                      )}
-
-                      <Icon
-                        size={19}
-                        className="shrink-0"
-                      />
-
-                      {!collapsed && (
-                        <span className="text-[13px] font-medium">
-                          {item.label}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+                {group.items.map((item) => renderNavigationItem(item))}
               </div>
             </div>
           ))}
@@ -163,28 +197,11 @@ export default function Sidebar({
 
         {/* Bottom navigation */}
         <div className="space-y-1 border-t border-white/10 px-3 py-4">
-          {bottomNavigation.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <button
-                key={item.label}
-                title={collapsed ? item.label : undefined}
-                onClick={() => onNavigate(item.label)}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-gray-400 transition hover:bg-white/[0.05] hover:text-white ${
-                  collapsed ? "justify-center" : ""
-                }`}
-              >
-                <Icon size={19} className="shrink-0" />
-
-                {!collapsed && (
-                  <span className="text-[13px] font-medium">
-                    {item.label}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+          {bottomNavigation.map((item) => (
+            <div key={item.label}>
+              {renderNavigationItem(item)}
+            </div>
+          ))}
 
           {/* Account footer */}
           {!collapsed && (
@@ -197,6 +214,7 @@ export default function Sidebar({
                 <p className="truncate text-xs font-semibold text-white">
                   Pharmacy Admin
                 </p>
+
                 <p className="truncate text-[10px] text-muted">
                   Administrator
                 </p>

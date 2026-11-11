@@ -19,9 +19,11 @@ export const navigationGroups = [
       {
         label: "Overview",
         icon: LayoutDashboard,
+        href: "/",
       },
       {
         label: "Inventory",
+        href: "/inventory",
         icon: Package,
       },
       {
