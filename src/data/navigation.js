@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Store,
   Truck,
+  ShoppingBasket,
   Settings,
   Headset,
 } from "lucide-react";
@@ -55,6 +56,12 @@ export const navigationGroups = [
       {
         label: "Suppliers",
         icon: Truck,
+        href: "/suppliers",
+      },
+      {
+        label: "Purchases",
+        icon: ShoppingBasket,
+        href: "/purchases",
       },
     ],
   },

@@ -10,6 +10,7 @@ import {
   Pill,
   X,
   LogOut,
+  LockKeyhole,
 } from "lucide-react";
 
 import {
@@ -26,7 +27,7 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
 
-  // Check whether a navigation link matches the current page.
+  // Determine whether a navigation item matches the current route.
   const isActive = (href) => {
     if (!href) return false;
 
@@ -48,27 +49,60 @@ export default function Sidebar({
     }
   };
 
+  // Render an individual navigation item.
   const renderNavigationItem = (item) => {
     const Icon = item.icon;
     const active = isActive(item.href);
 
+    const className = `
+      group relative flex w-full items-center gap-3
+      rounded-xl px-3 py-3 text-left
+      transition-all duration-200
+      ${
+        active
+          ? "bg-violet-500/15 text-violet-300"
+          : item.href
+            ? "text-gray-400 hover:bg-white/[0.05] hover:text-white"
+            : "cursor-not-allowed text-gray-600"
+      }
+      ${collapsed ? "justify-center" : ""}
+    `;
+
+    // Items without routes are shown as unavailable.
+    if (!item.href) {
+      return (
+        <div
+          key={item.label}
+          title={
+            collapsed
+              ? `${item.label} - Coming soon`
+              : `${item.label} - Coming soon`
+          }
+          aria-disabled="true"
+          className={className}
+        >
+          <Icon size={19} className="shrink-0" />
+
+          {!collapsed && (
+            <>
+              <span className="flex-1 text-[13px] font-medium">
+                {item.label}
+              </span>
+
+              <LockKeyhole size={13} className="text-gray-600" />
+            </>
+          )}
+        </div>
+      );
+    }
+
     return (
       <Link
         key={item.label}
-        href={item.href || "/"}
+        href={item.href}
         title={collapsed ? item.label : undefined}
         onClick={() => handleNavigation(item.label)}
-        className={`
-          group relative flex w-full items-center gap-3
-          rounded-xl px-3 py-3 text-left
-          transition-all duration-200
-          ${
-            active
-              ? "bg-violet-500/15 text-violet-300"
-              : "text-gray-400 hover:bg-white/[0.05] hover:text-white"
-          }
-          ${collapsed ? "justify-center" : ""}
-        `}
+        className={className}
       >
         {active && (
           <span className="absolute bottom-2 left-0 top-2 w-[3px] rounded-full bg-violet-400" />
@@ -189,7 +223,9 @@ export default function Sidebar({
               )}
 
               <div className="space-y-1">
-                {group.items.map((item) => renderNavigationItem(item))}
+                {group.items.map((item) =>
+                  renderNavigationItem(item)
+                )}
               </div>
             </div>
           ))}
