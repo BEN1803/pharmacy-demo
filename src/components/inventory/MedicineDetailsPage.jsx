@@ -145,7 +145,7 @@ export default function MedicineDetailsPage() {
     return (
       <div className="glass-card rounded-2xl p-10">
         <div className="mx-auto flex max-w-sm flex-col items-center text-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/10 border-t-blue-500" />
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-line border-t-blue-500" />
 
           <h2 className="mt-5 font-semibold text-foreground">
             Loading medicine details
@@ -174,7 +174,7 @@ export default function MedicineDetailsPage() {
 
         <Link
           href="/inventory"
-          className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-blue-700"
+          className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-medium text-ink transition hover:bg-blue-700"
         >
           <ArrowLeft size={16} />
           Back to inventory
@@ -356,7 +356,7 @@ export default function MedicineDetailsPage() {
 
         <button
           onClick={() => setShowStockModal(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-ink shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
         >
           <Plus size={18} />
           Receive Stock
@@ -464,7 +464,7 @@ export default function MedicineDetailsPage() {
 
       {/* Batch management */}
       <section className="glass-card overflow-hidden rounded-2xl">
-        <div className="flex flex-col gap-2 border-b border-white/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 border-b border-line p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-semibold text-foreground">
               Medicine Batches
@@ -475,14 +475,14 @@ export default function MedicineDetailsPage() {
             </p>
           </div>
 
-          <span className="w-fit rounded-lg bg-white/5 px-3 py-1.5 text-xs text-muted">
+          <span className="w-fit rounded-lg bg-surface px-3 py-1.5 text-xs text-muted">
             {(medicine.batches || []).length} batches
           </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[650px] text-left text-sm">
-            <thead className="bg-white/[0.02] text-xs uppercase text-muted">
+            <thead className="bg-surface-soft text-xs uppercase text-muted">
               <tr>
                 <th className="px-5 py-4 font-medium">Batch number</th>
                 <th className="px-5 py-4 font-medium">Quantity</th>
@@ -491,7 +491,7 @@ export default function MedicineDetailsPage() {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-line">
               {(medicine.batches || []).map((batch, index) => {
                 const expiryTime = batch.expiryDate
                   ? new Date(
@@ -523,7 +523,7 @@ export default function MedicineDetailsPage() {
                     ? "bg-amber-500/10 text-amber-400"
                     : expiryStatus === "Valid"
                     ? "bg-emerald-500/10 text-emerald-400"
-                    : "bg-white/5 text-muted";
+                    : "bg-surface text-muted";
 
                 return (
                   <tr key={`${batch.batchNumber}-${index}`}>
@@ -567,7 +567,7 @@ export default function MedicineDetailsPage() {
 
       {/* Stock movement history */}
       <section className="glass-card overflow-hidden rounded-2xl">
-        <div className="border-b border-white/5 p-5">
+        <div className="border-b border-line p-5">
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-violet-500/10 p-2.5 text-violet-400">
               <Clock3 size={20} />
@@ -590,7 +590,7 @@ export default function MedicineDetailsPage() {
             No stock movements recorded yet.
           </div>
         ) : (
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-line">
             {movements.map((movement) => (
               <div
                 key={movement.id}
@@ -630,14 +630,14 @@ export default function MedicineDetailsPage() {
       {/* Receive stock modal */}
       {showStockModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm">
-          <div className="my-auto w-full max-w-xl rounded-2xl border border-white/10 bg-[#111827] shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 p-5">
+          <div className="my-auto w-full max-w-xl rounded-2xl border border-line bg-elevated shadow-2xl">
+            <div className="flex items-center justify-between border-b border-line p-5">
               <div>
-                <h2 className="text-lg font-semibold text-white">
+                <h2 className="text-lg font-semibold text-ink">
                   Receive New Stock
                 </h2>
 
-                <p className="mt-1 text-xs text-gray-400">
+                <p className="mt-1 text-xs text-muted">
                   Add a new batch of {medicine.name}
                 </p>
               </div>
@@ -645,7 +645,7 @@ export default function MedicineDetailsPage() {
               <button
                 type="button"
                 onClick={() => setShowStockModal(false)}
-                className="rounded-lg p-2 text-gray-400 transition hover:bg-white/10 hover:text-white"
+                className="rounded-lg p-2 text-muted transition hover:bg-hover hover:text-ink"
                 aria-label="Close stock form"
               >
                 <X size={20} />
@@ -654,7 +654,7 @@ export default function MedicineDetailsPage() {
 
             <form onSubmit={handleStockSubmit} className="space-y-4 p-5">
               <div>
-                <label className="mb-2 block text-sm text-gray-300">
+                <label className="mb-2 block text-sm text-ink-soft">
                   Batch number
                 </label>
 
@@ -664,13 +664,13 @@ export default function MedicineDetailsPage() {
                   onChange={updateStockField}
                   placeholder="e.g. PCM-2026-03"
                   required
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-gray-500 focus:border-blue-500"
+                  className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted focus:border-blue-500"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-sm text-gray-300">
+                  <label className="mb-2 block text-sm text-ink-soft">
                     Quantity received
                   </label>
 
@@ -683,12 +683,12 @@ export default function MedicineDetailsPage() {
                     onChange={updateStockField}
                     placeholder="e.g. 200"
                     required
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none focus:border-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm text-gray-300">
+                  <label className="mb-2 block text-sm text-ink-soft">
                     Expiry date
                   </label>
 
@@ -698,13 +698,13 @@ export default function MedicineDetailsPage() {
                     value={stockForm.expiryDate}
                     onChange={updateStockField}
                     required
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-gray-300">
+                <label className="mb-2 block text-sm text-ink-soft">
                   Supplier
                 </label>
 
@@ -714,12 +714,12 @@ export default function MedicineDetailsPage() {
                   onChange={updateStockField}
                   placeholder="Enter supplier name"
                   required
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-500"
+                  className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-gray-300">
+                <label className="mb-2 block text-sm text-ink-soft">
                   Purchase price per unit (TZS)
                 </label>
 
@@ -732,7 +732,7 @@ export default function MedicineDetailsPage() {
                   onChange={updateStockField}
                   placeholder="e.g. 150"
                   required
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-blue-500"
+                  className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -741,7 +741,7 @@ export default function MedicineDetailsPage() {
                   type="button"
                   onClick={() => setShowStockModal(false)}
                   disabled={saving}
-                  className="rounded-xl border border-white/10 px-5 py-3 text-sm font-medium text-gray-300 transition hover:bg-white/5 disabled:opacity-50"
+                  className="rounded-xl border border-line px-5 py-3 text-sm font-medium text-ink-soft transition hover:bg-hover disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -749,7 +749,7 @@ export default function MedicineDetailsPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-ink transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {saving ? "Adding stock..." : "Confirm Stock Received"}
                 </button>

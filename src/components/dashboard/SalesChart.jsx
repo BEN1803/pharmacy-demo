@@ -40,8 +40,8 @@ function CustomTooltip({ active, payload, label }) {
   }
 
   return (
-    <div className="glass-panel rounded-xl border border-white/10 p-3 shadow-xl">
-      <p className="mb-3 text-xs font-semibold text-white">
+    <div className="glass-panel rounded-xl border border-line p-3 shadow-xl">
+      <p className="mb-3 text-xs font-semibold text-ink">
         {label}
       </p>
 
@@ -54,7 +54,7 @@ function CustomTooltip({ active, payload, label }) {
             {item.name}
           </span>
 
-          <span className="text-xs font-semibold text-white">
+          <span className="text-xs font-semibold text-ink">
             {formatCurrency(item.value)}
           </span>
         </div>
@@ -95,7 +95,7 @@ export default function SalesChart() {
         </div>
 
         {/* Period filter */}
-        <div className="flex w-fit items-center gap-1 rounded-xl border border-white/[0.07] bg-white/[0.035] p-1">
+        <div className="flex w-fit items-center gap-1 rounded-xl border border-line bg-surface p-1">
           {periods.map((item) => (
             <button
               key={item.value}
@@ -103,7 +103,7 @@ export default function SalesChart() {
               className={`rounded-lg px-3 py-2 text-[10px] font-medium transition sm:text-xs ${
                 period === item.value
                   ? "bg-violet-500/20 text-violet-300"
-                  : "text-gray-400 hover:text-white"
+                  : "text-muted hover:text-ink"
               }`}
             >
               {item.label}
@@ -166,7 +166,7 @@ export default function SalesChart() {
             </defs>
 
             <CartesianGrid
-              stroke="rgba(255,255,255,0.06)"
+              stroke="var(--chart-grid)"
               vertical={false}
             />
 
@@ -174,16 +174,16 @@ export default function SalesChart() {
               dataKey="label"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: "#9299b2", fontSize: 11 }}
+              tick={{ fill: "var(--muted)", fontSize: 11 }}
               dy={10}
             />
 
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: "#9299b2", fontSize: 10 }}
+              tick={{ fill: "var(--muted)", fontSize: 10 }}
               tickFormatter={(value) =>
-                `${(value / 1000000).toFixed(0)}M`
+                `${(value / 1000000).toFixed(1).replace(/\.0$/, "")}M`
               }
             />
 
@@ -213,7 +213,7 @@ export default function SalesChart() {
       </div>
 
       {/* Legend */}
-      <div className="mt-5 flex flex-wrap items-center gap-5 border-t border-white/[0.07] pt-4">
+      <div className="mt-5 flex flex-wrap items-center gap-5 border-t border-line pt-4">
 
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-violet-400" />

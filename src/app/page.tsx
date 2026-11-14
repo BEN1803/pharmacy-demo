@@ -37,7 +37,7 @@ export default function Home() {
 
         <div className="flex flex-wrap items-center gap-2">
 
-          <button className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-medium text-gray-300 transition hover:bg-white/10">
+          <button className="flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-xs font-medium text-ink-soft transition hover:bg-hover">
             <CalendarDays size={15} />
             November 2026
           </button>
@@ -88,7 +88,7 @@ export default function Home() {
 
             <div>
               <div className="mb-2 flex justify-between">
-                <span className="text-xs text-gray-300">
+                <span className="text-xs text-ink-soft">
                   Stock availability
                 </span>
 
@@ -97,14 +97,14 @@ export default function Home() {
                 </span>
               </div>
 
-              <div className="h-2 rounded-full bg-white/[0.06]">
+              <div className="h-2 rounded-full bg-surface-strong">
                 <div className="h-2 w-[92%] rounded-full bg-emerald-400" />
               </div>
             </div>
 
             <div>
               <div className="mb-2 flex justify-between">
-                <span className="text-xs text-gray-300">
+                <span className="text-xs text-ink-soft">
                   Order fulfilment
                 </span>
 
@@ -113,14 +113,14 @@ export default function Home() {
                 </span>
               </div>
 
-              <div className="h-2 rounded-full bg-white/[0.06]">
+              <div className="h-2 rounded-full bg-surface-strong">
                 <div className="h-2 w-[86%] rounded-full bg-cyan-400" />
               </div>
             </div>
 
             <div>
               <div className="mb-2 flex justify-between">
-                <span className="text-xs text-gray-300">
+                <span className="text-xs text-ink-soft">
                   Sales target
                 </span>
 
@@ -129,7 +129,7 @@ export default function Home() {
                 </span>
               </div>
 
-              <div className="h-2 rounded-full bg-white/[0.06]">
+              <div className="h-2 rounded-full bg-surface-strong">
                 <div className="h-2 w-[74%] rounded-full bg-violet-400" />
               </div>
             </div>
@@ -141,7 +141,7 @@ export default function Home() {
               Performance insight
             </p>
 
-            <p className="mt-2 text-xs leading-6 text-gray-400">
+            <p className="mt-2 text-xs leading-6 text-muted">
               Your pharmacy is maintaining strong stock availability.
               Review products with low stock to avoid interrupted sales.
             </p>

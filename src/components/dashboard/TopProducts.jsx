@@ -33,12 +33,12 @@ export default function TopProducts() {
 
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] text-xs font-semibold text-gray-400">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface text-xs font-semibold text-muted">
                   {String(index + 1).padStart(2, "0")}
                 </div>
 
                 <div className="min-w-0">
-                  <p className="truncate text-xs font-semibold text-white">
+                  <p className="truncate text-xs font-semibold text-ink">
                     {product.name}
                   </p>
 
@@ -59,7 +59,7 @@ export default function TopProducts() {
               </div>
             </div>
 
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-strong">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-400 transition-all duration-500"
                 style={{ width: `${product.share}%` }}
@@ -70,7 +70,7 @@ export default function TopProducts() {
         ))}
       </div>
 
-      <button className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] py-3 text-xs font-medium text-gray-300 transition hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-violet-300">
+      <button className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-line py-3 text-xs font-medium text-ink-soft transition hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-violet-300">
         View product analytics
         <ArrowUpRight size={14} />
       </button>

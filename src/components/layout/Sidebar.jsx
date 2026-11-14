@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -38,6 +39,28 @@ export default function Sidebar({
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
+  // Keep the topbar title in sync when a page is opened directly by URL.
+  useEffect(() => {
+    if (!onNavigate) return;
+
+    const items = [
+      ...navigationGroups.flatMap((group) => group.items),
+      ...bottomNavigation,
+    ];
+
+    const matchesRoute = (href) => {
+      if (href === "/") return pathname === "/";
+
+      return pathname === href || pathname.startsWith(`${href}/`);
+    };
+
+    const current = items.find((item) => item.href && matchesRoute(item.href));
+
+    if (current) {
+      onNavigate(current.label);
+    }
+  }, [pathname, onNavigate]);
+
   // Close the mobile sidebar after navigation.
   const handleNavigation = (label) => {
     if (onNavigate) {
@@ -62,8 +85,8 @@ export default function Sidebar({
         active
           ? "bg-violet-500/15 text-violet-300"
           : item.href
-            ? "text-gray-400 hover:bg-white/[0.05] hover:text-white"
-            : "cursor-not-allowed text-gray-600"
+            ? "text-muted hover:bg-hover hover:text-ink"
+            : "cursor-not-allowed text-muted/70"
       }
       ${collapsed ? "justify-center" : ""}
     `;
@@ -89,7 +112,7 @@ export default function Sidebar({
                 {item.label}
               </span>
 
-              <LockKeyhole size={13} className="text-gray-600" />
+              <LockKeyhole size={13} className="text-muted/70" />
             </>
           )}
         </div>
@@ -133,7 +156,7 @@ export default function Sidebar({
       <aside
         className={`
           glass-panel fixed inset-y-0 left-0 z-50
-          flex flex-col border-r border-white/10
+          flex flex-col border-r border-line
           transition-all duration-300 ease-in-out
           ${collapsed ? "lg:w-[84px]" : "lg:w-[260px]"}
           w-[260px]
@@ -145,19 +168,19 @@ export default function Sidebar({
         `}
       >
         {/* Brand */}
-        <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-white/10 px-5">
+        <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-line px-5">
           <Link
             href="/"
             onClick={() => handleNavigation("Dashboard")}
             className="flex items-center gap-3 overflow-hidden"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-cyan-500 shadow-lg shadow-violet-500/20">
-              <Pill className="h-5 w-5 text-white" />
+              <Pill className="h-5 w-5 text-ink" />
             </div>
 
             {!collapsed && (
               <div className="whitespace-nowrap">
-                <h1 className="text-lg font-bold tracking-tight text-white">
+                <h1 className="text-lg font-bold tracking-tight text-ink">
                   Medi<span className="gradient-text">Flow</span>
                 </h1>
 
@@ -171,7 +194,7 @@ export default function Sidebar({
           {/* Mobile close button */}
           <button
             onClick={onClose}
-            className="rounded-lg p-2 text-muted hover:bg-white/10 lg:hidden"
+            className="rounded-lg p-2 text-muted hover:bg-hover lg:hidden"
             aria-label="Close sidebar"
           >
             <X size={18} />
@@ -181,7 +204,7 @@ export default function Sidebar({
         {/* Collapse button */}
         <button
           onClick={onToggle}
-          className="absolute -right-3 top-[88px] hidden h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-[#17172b] text-gray-300 shadow-lg transition hover:bg-violet-500 hover:text-white lg:flex"
+          className="absolute -right-3 top-[88px] hidden h-7 w-7 items-center justify-center rounded-full border border-line bg-elevated text-ink-soft shadow-lg transition hover:bg-violet-500 hover:text-white lg:flex"
           aria-label="Toggle sidebar"
         >
           {collapsed ? (
@@ -192,7 +215,7 @@ export default function Sidebar({
         </button>
 
         {/* Pharmacy profile */}
-        <div className="mx-3 mt-5 rounded-xl border border-white/[0.07] bg-white/[0.035] p-3">
+        <div className="mx-3 mt-5 rounded-xl border border-line bg-surface p-3">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-300">
               <Pill size={18} />
@@ -200,7 +223,7 @@ export default function Sidebar({
 
             {!collapsed && (
               <div className="min-w-0">
-                <p className="truncate text-xs font-semibold text-white">
+                <p className="truncate text-xs font-semibold text-ink">
                   HealthPlus Pharmacy
                 </p>
 
@@ -217,7 +240,7 @@ export default function Sidebar({
           {navigationGroups.map((group) => (
             <div key={group.title}>
               {!collapsed && (
-                <p className="mb-3 px-3 text-[10px] font-semibold tracking-[0.18em] text-gray-500">
+                <p className="mb-3 px-3 text-[10px] font-semibold tracking-[0.18em] text-muted">
                   {group.title}
                 </p>
               )}
@@ -232,7 +255,7 @@ export default function Sidebar({
         </nav>
 
         {/* Bottom navigation */}
-        <div className="space-y-1 border-t border-white/10 px-3 py-4">
+        <div className="space-y-1 border-t border-line px-3 py-4">
           {bottomNavigation.map((item) => (
             <div key={item.label}>
               {renderNavigationItem(item)}
@@ -241,13 +264,13 @@ export default function Sidebar({
 
           {/* Account footer */}
           {!collapsed && (
-            <div className="mt-4 flex items-center gap-3 rounded-xl bg-white/[0.035] p-3">
+            <div className="mt-4 flex items-center gap-3 rounded-xl bg-surface p-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-cyan-400 text-xs font-bold text-white">
                 BF
               </div>
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-semibold text-white">
+                <p className="truncate text-xs font-semibold text-ink">
                   Pharmacy Admin
                 </p>
 
@@ -256,7 +279,7 @@ export default function Sidebar({
                 </p>
               </div>
 
-              <LogOut size={15} className="text-gray-500" />
+              <LogOut size={15} className="text-muted" />
             </div>
           )}
         </div>

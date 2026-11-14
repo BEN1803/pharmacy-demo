@@ -345,7 +345,7 @@ export default function SalesPageContent() {
                   }
                   className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-medium transition ${
                     selectedCategory === category
-                      ? "bg-blue-600 text-white"
+                      ? "bg-blue-600 text-ink"
                       : "border border-[var(--border)] bg-[var(--card)] text-muted hover:text-foreground"
                   }`}
                 >
@@ -427,7 +427,7 @@ export default function SalesPageContent() {
                     <button
                       onClick={() => addToCart(medicine)}
                       disabled={isOutOfStock}
-                      className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-semibold text-ink transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <Plus size={15} />
                       {cartItem ? "Add more" : "Add"}
@@ -638,11 +638,11 @@ export default function SalesPageContent() {
             disabled={
               cart.length === 0 || processing || !loaded
             }
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-ink transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {processing ? (
               <>
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-line-strong border-t-white" />
                 Processing sale...
               </>
             ) : (
@@ -743,7 +743,7 @@ export default function SalesPageContent() {
 
             <button
               onClick={startNewSale}
-              className="mt-5 w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+              className="mt-5 w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-ink transition hover:bg-blue-700"
             >
               Start New Sale
             </button>

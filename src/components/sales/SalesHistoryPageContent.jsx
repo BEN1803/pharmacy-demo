@@ -672,7 +672,7 @@ export default function SalesHistoryPageContent() {
             {sales.length === 0 && (
               <Link
                 href="/sales"
-                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-ink transition hover:bg-blue-700"
               >
                 <ShoppingCart size={16} />
                 Create a sale
@@ -935,7 +935,7 @@ export default function SalesHistoryPageContent() {
             <div className="mt-6 flex flex-col gap-2 sm:flex-row">
               <button
                 onClick={() => printReceipt(selectedSale)}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-ink transition hover:bg-blue-700"
               >
                 <Printer size={17} />
                 Print receipt

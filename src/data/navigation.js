@@ -35,6 +35,7 @@ export const navigationGroups = [
       {
         label: "Analytics",
         icon: ChartNoAxesCombined,
+        href: "/analytics",
       },
     ],
   },
@@ -44,14 +45,17 @@ export const navigationGroups = [
       {
         label: "Employees",
         icon: Users,
+        href: "/employees",
       },
       {
         label: "Orders",
         icon: ClipboardList,
+        href: "/orders",
       },
       {
         label: "Marketplace",
         icon: Store,
+        href: "/marketplace",
       },
       {
         label: "Suppliers",
@@ -71,6 +75,7 @@ export const bottomNavigation = [
   {
     label: "Settings",
     icon: Settings,
+    href: "/settings",
   },
   {
     label: "Help & Support",

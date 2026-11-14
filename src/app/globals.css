@@ -1,21 +1,109 @@
-
 @import "tailwindcss";
 
 /* =========================================
-   1. DESIGN TOKENS
+   1. THEME TOKENS
    ========================================= */
 
-@theme {
-  --color-background: #080b18;
-  --color-foreground: #f4f5fb;
-  --color-muted: #9299b2;
+:root {
+  --background: #080b18;
+  --foreground: #f4f5fb;
 
-  --color-panel: #11162a;
+  --ink: #f4f5fb;
+  --ink-soft: #d7dae6;
+  --muted: #9299b2;
+
+  --panel: #11162a;
+  --elevated: #17172b;
+  --knob: #ffffff;
+
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.16);
+
+  /* Legacy aliases used by older sales screens. */
+  --border: var(--line);
+  --card: var(--surface);
+
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-soft: rgba(255, 255, 255, 0.025);
+  --surface-strong: rgba(255, 255, 255, 0.07);
+  --hover: rgba(255, 255, 255, 0.08);
+  --track: rgba(255, 255, 255, 0.15);
+
+  --glass-bg: rgba(17, 22, 42, 0.62);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+  --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+
+  --glow-one: rgba(91, 33, 182, 0.19);
+  --glow-two: rgba(8, 145, 178, 0.12);
+
+  --chart-grid: rgba(255, 255, 255, 0.06);
+
+  --scrollbar-thumb: rgba(167, 139, 250, 0.3);
+  --scrollbar-thumb-hover: rgba(167, 139, 250, 0.55);
+
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --background: #f5f6fc;
+  --foreground: #14172b;
+
+  --ink: #14172b;
+  --ink-soft: #3d4459;
+  --muted: #5c657d;
+
+  --panel: #ffffff;
+  --elevated: #ffffff;
+  --knob: #ffffff;
+
+  --line: rgba(20, 23, 43, 0.11);
+  --line-strong: rgba(20, 23, 43, 0.2);
+
+  --surface: rgba(20, 23, 43, 0.035);
+  --surface-soft: rgba(20, 23, 43, 0.025);
+  --surface-strong: rgba(20, 23, 43, 0.07);
+  --hover: rgba(20, 23, 43, 0.07);
+  --track: rgba(20, 23, 43, 0.12);
+
+  --glass-bg: rgba(255, 255, 255, 0.74);
+  --glass-shadow: 0 10px 34px rgba(20, 23, 43, 0.08);
+  --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+
+  --glow-one: rgba(139, 92, 246, 0.16);
+  --glow-two: rgba(34, 211, 238, 0.16);
+
+  --chart-grid: rgba(20, 23, 43, 0.08);
+
+  --scrollbar-thumb: rgba(139, 92, 246, 0.32);
+  --scrollbar-thumb-hover: rgba(139, 92, 246, 0.55);
+
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+
+  --color-panel: var(--panel);
+  --color-elevated: var(--elevated);
+  --color-knob: var(--knob);
+
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
+  --color-surface-strong: var(--surface-strong);
+  --color-hover: var(--hover);
+  --color-track: var(--track);
+
   --color-accent: #8b5cf6;
   --color-accent-light: #a78bfa;
   --color-cyan: #22d3ee;
-
-  --color-line: rgba(255, 255, 255, 0.09);
 
   --font-sans: var(--font-geist-sans);
 }
@@ -31,6 +119,7 @@
 html {
   min-height: 100%;
   scroll-behavior: smooth;
+  background-color: var(--background);
 }
 
 body {
@@ -39,18 +128,22 @@ body {
   background:
     radial-gradient(
       ellipse at 15% 10%,
-      rgba(91, 33, 182, 0.19),
+      var(--glow-one),
       transparent 38%
     ),
     radial-gradient(
       ellipse at 85% 80%,
-      rgba(8, 145, 178, 0.12),
+      var(--glow-two),
       transparent 35%
     ),
-    #080b18;
+    var(--background);
 
-  color: var(--color-foreground);
+  color: var(--foreground);
   font-family: var(--font-geist-sans), sans-serif;
+
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
 }
 
 /* =========================================
@@ -58,19 +151,22 @@ body {
    ========================================= */
 
 .glass-panel {
-  background: rgba(17, 22, 42, 0.62);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: var(--glass-bg);
+  border: 1px solid var(--line);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  box-shadow: var(--glass-shadow), var(--glass-inset);
+
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.075);
+  background: var(--surface);
+  border: 1px solid var(--line);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 
@@ -81,8 +177,8 @@ body {
 }
 
 .glass-card:hover {
-  background: rgba(255, 255, 255, 0.055);
-  border-color: rgba(167, 139, 250, 0.25);
+  background: var(--surface-strong);
+  border-color: rgba(167, 139, 250, 0.32);
 }
 
 /* =========================================
@@ -102,8 +198,155 @@ body {
   color: transparent;
 }
 
+[data-theme="light"] .gradient-text {
+  background: linear-gradient(
+    110deg,
+    #7c3aed,
+    #6d28d9,
+    #0891b2
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
 /* =========================================
-   5. CUSTOM SCROLLBAR
+   5. THEME-AWARE ACCENTS
+   ========================================= */
+
+/* Accent text shades tuned for light surfaces. */
+[data-theme="light"] .text-violet-200 {
+  color: #5b21b6;
+}
+
+[data-theme="light"] .text-violet-300,
+[data-theme="light"] .text-violet-500 {
+  color: #6d28d9;
+}
+
+[data-theme="light"] .text-violet-400 {
+  color: #7c3aed;
+}
+
+[data-theme="light"] .text-cyan-300 {
+  color: #0e7490;
+}
+
+[data-theme="light"] .text-cyan-400 {
+  color: #0891b2;
+}
+
+[data-theme="light"] .text-emerald-200 {
+  color: #065f46;
+}
+
+[data-theme="light"] .text-emerald-300,
+[data-theme="light"] .text-emerald-500 {
+  color: #047857;
+}
+
+[data-theme="light"] .text-emerald-400 {
+  color: #059669;
+}
+
+[data-theme="light"] .text-amber-200 {
+  color: #92400e;
+}
+
+[data-theme="light"] .text-amber-300,
+[data-theme="light"] .text-amber-400,
+[data-theme="light"] .text-amber-500 {
+  color: #b45309;
+}
+
+[data-theme="light"] .text-amber-600 {
+  color: #92400e;
+}
+
+[data-theme="light"] .text-rose-300 {
+  color: #be123c;
+}
+
+[data-theme="light"] .text-rose-400 {
+  color: #e11d48;
+}
+
+[data-theme="light"] .text-red-400,
+[data-theme="light"] .text-red-500 {
+  color: #dc2626;
+}
+
+[data-theme="light"] .text-blue-300 {
+  color: #1d4ed8;
+}
+
+[data-theme="light"] .text-blue-400 {
+  color: #2563eb;
+}
+
+[data-theme="light"] .text-blue-500 {
+  color: #1d4ed8;
+}
+
+[data-theme="light"] .text-blue-600 {
+  color: #1e40af;
+}
+
+/* Hover variants keep readable contrast on light surfaces. */
+[data-theme="light"] .hover\:text-violet-200:hover,
+[data-theme="light"] .hover\:text-violet-300:hover {
+  color: #5b21b6;
+}
+
+[data-theme="light"] .hover\:text-emerald-200:hover,
+[data-theme="light"] .hover\:text-emerald-300:hover {
+  color: #065f46;
+}
+
+[data-theme="light"] .hover\:text-blue-300:hover,
+[data-theme="light"] .hover\:text-blue-400:hover {
+  color: #1d4ed8;
+}
+
+[data-theme="light"] .hover\:text-rose-300:hover {
+  color: #be123c;
+}
+
+[data-theme="light"] .hover\:text-red-500:hover {
+  color: #b91c1c;
+}
+
+/* Theme toggle icon visibility is driven by the document theme. */
+.theme-icon-light {
+  display: none;
+}
+
+.theme-check {
+  display: none;
+}
+
+[data-theme="light"] .theme-icon-dark {
+  display: none;
+}
+
+[data-theme="light"] .theme-icon-light {
+  display: block;
+}
+
+/* Selected appearance option follows the active document theme. */
+[data-theme="dark"] .theme-choice[data-theme-choice="dark"],
+[data-theme="light"] .theme-choice[data-theme-choice="light"] {
+  border-color: rgba(139, 92, 246, 0.45);
+  background: rgba(139, 92, 246, 0.1);
+}
+
+[data-theme="dark"] .theme-choice[data-theme-choice="dark"] .theme-check,
+[data-theme="light"] .theme-choice[data-theme-choice="light"] .theme-check {
+  display: block;
+}
+
+/* =========================================
+   6. CUSTOM SCROLLBAR
    ========================================= */
 
 ::-webkit-scrollbar {
@@ -116,21 +359,25 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(167, 139, 250, 0.3);
+  background: var(--scrollbar-thumb);
   border-radius: 20px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(167, 139, 250, 0.55);
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* =========================================
-   6. ACCESSIBILITY
+   7. ACCESSIBILITY
    ========================================= */
 
 ::selection {
   background: rgba(139, 92, 246, 0.35);
   color: white;
+}
+
+[data-theme="light"] ::selection {
+  color: #14172b;
 }
 
 @media (prefers-reduced-motion: reduce) {

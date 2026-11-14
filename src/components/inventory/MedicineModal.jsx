@@ -98,9 +98,9 @@ export default function MedicineModal({ open, onClose, onSave }) {
   };
 
   const inputClass =
-    "w-full rounded-xl border border-white/10 bg-white/5 px-3.5 py-3 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/10";
+    "w-full rounded-xl border border-line bg-surface px-3.5 py-3 text-sm text-ink outline-none transition placeholder:text-ink/30 focus:border-violet-400/70 focus:ring-2 focus:ring-violet-500/10";
 
-  const labelClass = "mb-2 block text-sm font-medium text-white/70";
+  const labelClass = "mb-2 block text-sm font-medium text-ink/70";
 
   return (
     <div
@@ -109,22 +109,22 @@ export default function MedicineModal({ open, onClose, onSave }) {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-white/10 bg-[#111827] shadow-2xl shadow-black/40">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#111827]/95 px-5 py-4 backdrop-blur-xl sm:px-7">
+      <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-line bg-elevated shadow-2xl shadow-black/40">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-elevated/95 px-5 py-4 backdrop-blur-xl sm:px-7">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/15 text-violet-300">
               <Pill size={20} />
             </div>
             <div>
-              <h2 className="font-semibold text-white">Add new medicine</h2>
-              <p className="text-xs text-white/40">Register a medicine and its first batch</p>
+              <h2 className="font-semibold text-ink">Add new medicine</h2>
+              <p className="text-xs text-ink/40">Register a medicine and its first batch</p>
             </div>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
+            className="rounded-lg p-2 text-ink/50 transition hover:bg-hover hover:text-ink"
           >
             <X size={20} />
           </button>
@@ -132,7 +132,7 @@ export default function MedicineModal({ open, onClose, onSave }) {
 
         <form onSubmit={handleSubmit} className="space-y-6 p-5 sm:p-7">
           <section>
-            <h3 className="mb-4 text-sm font-semibold text-white">
+            <h3 className="mb-4 text-sm font-semibold text-ink">
               Medicine information
             </h3>
 
@@ -182,10 +182,10 @@ export default function MedicineModal({ open, onClose, onSave }) {
             </div>
           </section>
 
-          <div className="border-t border-white/10" />
+          <div className="border-t border-line" />
 
           <section>
-            <h3 className="mb-4 text-sm font-semibold text-white">
+            <h3 className="mb-4 text-sm font-semibold text-ink">
               Pricing and stock
             </h3>
 
@@ -228,15 +228,15 @@ export default function MedicineModal({ open, onClose, onSave }) {
             </div>
           )}
 
-          <div className="flex flex-col-reverse gap-3 border-t border-white/10 pt-5 sm:flex-row sm:justify-end">
-            <button type="button" onClick={onClose} className="rounded-xl border border-white/10 px-5 py-3 text-sm font-medium text-white/70 transition hover:bg-white/5">
+          <div className="flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:justify-end">
+            <button type="button" onClick={onClose} className="rounded-xl border border-line px-5 py-3 text-sm font-medium text-ink/70 transition hover:bg-hover">
               Cancel
             </button>
 
             <button type="submit" disabled={saving} className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60">
               {saving ? (
                 <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-line-strong border-t-white" />
                   Saving medicine...
                 </>
               ) : (

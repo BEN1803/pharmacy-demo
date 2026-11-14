@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 import {
   Menu,
@@ -12,24 +13,30 @@ import {
   User,
   LogOut,
   CheckCheck,
+  Sun,
+  Moon,
 } from "lucide-react";
+
+import { useTheme } from "@/context/ThemeContext";
 
 export default function Topbar({
   onMenuClick,
   pageTitle,
 }) {
+  const { toggleTheme } = useTheme();
+
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-30 flex h-[76px] items-center justify-between border-b border-white/[0.07] bg-[#080b18]/80 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-30 flex h-[76px] items-center justify-between border-b border-line bg-background/80 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
 
       {/* Left section */}
       <div className="flex min-w-0 items-center gap-3 sm:gap-5">
 
         <button
           onClick={onMenuClick}
-          className="rounded-xl border border-white/10 bg-white/[0.04] p-2 text-gray-300 hover:bg-white/10 lg:hidden"
+          className="rounded-xl border border-line bg-surface p-2 text-ink-soft hover:bg-hover lg:hidden"
           aria-label="Open navigation"
         >
           <Menu size={19} />
@@ -40,7 +47,7 @@ export default function Topbar({
             RETAIL WORKSPACE
           </p>
 
-          <h2 className="truncate text-base font-semibold text-white sm:mt-1 sm:text-lg">
+          <h2 className="truncate text-base font-semibold text-ink sm:mt-1 sm:text-lg">
             {pageTitle}
           </h2>
         </div>
@@ -50,19 +57,30 @@ export default function Topbar({
       <div className="flex shrink-0 items-center gap-2 sm:gap-4">
 
         {/* Search */}
-        <div className="hidden w-48 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 md:flex lg:w-64">
-          <Search size={16} className="text-gray-500" />
+        <div className="hidden w-48 items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2.5 md:flex lg:w-64">
+          <Search size={16} className="text-muted" />
 
           <input
             type="text"
             placeholder="Search anything..."
-            className="w-full bg-transparent text-xs text-white outline-none placeholder:text-gray-500"
+            className="w-full bg-transparent text-xs text-ink outline-none placeholder:text-muted"
           />
 
-          <span className="rounded border border-white/10 px-1.5 py-0.5 text-[9px] text-gray-500">
+          <span className="rounded border border-line px-1.5 py-0.5 text-[9px] text-muted">
             /
           </span>
         </div>
+
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          className="rounded-xl border border-line bg-surface p-2.5 text-muted transition hover:border-violet-400/30 hover:bg-hover hover:text-ink"
+          aria-label="Toggle color theme"
+          title="Toggle color theme"
+        >
+          <Moon size={18} className="theme-icon-dark" />
+          <Sun size={18} className="theme-icon-light" />
+        </button>
 
         {/* Notifications */}
         <div className="relative">
@@ -71,12 +89,12 @@ export default function Topbar({
               setNotificationsOpen(!notificationsOpen);
               setProfileOpen(false);
             }}
-            className="relative rounded-xl border border-white/10 bg-white/[0.04] p-2.5 text-gray-300 transition hover:bg-white/10"
+            className="relative rounded-xl border border-line bg-surface p-2.5 text-ink-soft transition hover:bg-hover"
             aria-label="Notifications"
           >
             <Bell size={18} />
 
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-[#11162a] bg-violet-400" />
+            <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-background bg-violet-400" />
           </button>
 
           {notificationsOpen && (
@@ -90,7 +108,7 @@ export default function Topbar({
               </div>
 
               <div className="mt-4 space-y-3">
-                <div className="flex gap-3 rounded-xl bg-white/[0.04] p-3">
+                <div className="flex gap-3 rounded-xl bg-surface p-3">
                   <span className="h-2 w-2 mt-1.5 shrink-0 rounded-full bg-amber-400" />
 
                   <div>
@@ -100,13 +118,13 @@ export default function Topbar({
                     <p className="mt-1 text-[11px] leading-5 text-muted">
                       Paracetamol 500mg is running low.
                     </p>
-                    <p className="mt-1 text-[10px] text-gray-500">
+                    <p className="mt-1 text-[10px] text-muted">
                       5 minutes ago
                     </p>
                   </div>
                 </div>
 
-                <div className="flex gap-3 rounded-xl bg-white/[0.04] p-3">
+                <div className="flex gap-3 rounded-xl bg-surface p-3">
                   <span className="h-2 w-2 mt-1.5 shrink-0 rounded-full bg-emerald-400" />
 
                   <div>
@@ -116,7 +134,7 @@ export default function Topbar({
                     <p className="mt-1 text-[11px] leading-5 text-muted">
                       Your wholesale order has been confirmed.
                     </p>
-                    <p className="mt-1 text-[10px] text-gray-500">
+                    <p className="mt-1 text-[10px] text-muted">
                       20 minutes ago
                     </p>
                   </div>
@@ -140,14 +158,14 @@ export default function Topbar({
               setProfileOpen(!profileOpen);
               setNotificationsOpen(false);
             }}
-            className="flex items-center gap-2 rounded-xl p-1.5 transition hover:bg-white/[0.05]"
+            className="flex items-center gap-2 rounded-xl p-1.5 transition hover:bg-hover"
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 text-xs font-bold text-white">
               BF
             </div>
 
             <div className="hidden text-left sm:block">
-              <p className="text-xs font-semibold text-white">
+              <p className="text-xs font-semibold text-ink">
                 Benjamin
               </p>
               <p className="text-[10px] text-muted">
@@ -155,12 +173,12 @@ export default function Topbar({
               </p>
             </div>
 
-            <ChevronDown size={14} className="hidden text-gray-500 sm:block" />
+            <ChevronDown size={14} className="hidden text-muted sm:block" />
           </button>
 
           {profileOpen && (
             <div className="glass-panel absolute right-0 top-14 w-52 rounded-xl p-2 shadow-2xl">
-              <div className="border-b border-white/10 px-3 py-2">
+              <div className="border-b border-line px-3 py-2">
                 <p className="text-xs font-semibold">
                   My Account
                 </p>
@@ -171,19 +189,20 @@ export default function Topbar({
 
               <button
                 onClick={() => setProfileOpen(false)}
-                className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-xs text-gray-300 hover:bg-white/10"
+                className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-xs text-ink-soft hover:bg-hover"
               >
                 <User size={15} />
                 My profile
               </button>
 
-              <button
+              <Link
+                href="/settings"
                 onClick={() => setProfileOpen(false)}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-xs text-gray-300 hover:bg-white/10"
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-xs text-ink-soft hover:bg-hover"
               >
                 <Settings size={15} />
                 Account settings
-              </button>
+              </Link>
 
               <button
                 onClick={() => setProfileOpen(false)}

@@ -390,16 +390,16 @@ export default function SuppliersPageContent() {
   if (!loaded) {
     return (
       <div className="space-y-6 animate-pulse">
-        <div className="h-9 w-56 rounded-lg bg-white/10" />
+        <div className="h-9 w-56 rounded-lg bg-surface-strong" />
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[1, 2, 3, 4].map((item) => (
             <div
               key={item}
-              className="h-28 rounded-2xl bg-white/[0.05]"
+              className="h-28 rounded-2xl bg-surface"
             />
           ))}
         </div>
-        <div className="h-80 rounded-2xl bg-white/[0.05]" />
+        <div className="h-80 rounded-2xl bg-surface" />
       </div>
     );
   }
@@ -415,7 +415,7 @@ export default function SuppliersPageContent() {
             <span className="text-violet-300">Suppliers</span>
           </div>
 
-          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
             Suppliers
           </h1>
 
@@ -470,9 +470,9 @@ export default function SuppliersPageContent() {
 
       {/* Supplier directory */}
       <section className="glass-panel overflow-hidden rounded-2xl">
-        <div className="flex flex-col gap-4 border-b border-white/10 p-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-4 border-b border-line p-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="font-semibold text-white">
+            <h2 className="font-semibold text-ink">
               Supplier Directory
             </h2>
             <p className="mt-1 text-xs text-muted">
@@ -485,21 +485,21 @@ export default function SuppliersPageContent() {
             <div className="relative">
               <Search
                 size={17}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
               />
 
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search suppliers..."
-                className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-gray-500 focus:border-violet-500/50 sm:w-64"
+                className="w-full rounded-xl border border-line bg-surface py-2.5 pl-10 pr-4 text-sm text-ink outline-none transition placeholder:text-muted focus:border-violet-500/50 sm:w-64"
               />
             </div>
 
             <div className="relative">
               <Filter
                 size={15}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
               />
 
               <select
@@ -507,7 +507,7 @@ export default function SuppliersPageContent() {
                 onChange={(event) =>
                   setStatusFilter(event.target.value)
                 }
-                className="w-full appearance-none rounded-xl border border-white/10 bg-[#17172b] py-2.5 pl-9 pr-8 text-sm text-gray-300 outline-none focus:border-violet-500/50 sm:w-40"
+                className="w-full appearance-none rounded-xl border border-line bg-elevated py-2.5 pl-9 pr-8 text-sm text-ink-soft outline-none focus:border-violet-500/50 sm:w-40"
               >
                 <option value="All">All statuses</option>
                 <option value="Active">Active</option>
@@ -521,7 +521,7 @@ export default function SuppliersPageContent() {
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[850px] text-left">
             <thead>
-              <tr className="border-b border-white/10 bg-white/[0.025] text-[10px] uppercase tracking-wider text-gray-500">
+              <tr className="border-b border-line bg-surface-soft text-[10px] uppercase tracking-wider text-muted">
                 <th className="px-5 py-4 font-semibold">
                   Supplier
                 </th>
@@ -543,11 +543,11 @@ export default function SuppliersPageContent() {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-white/[0.06]">
+            <tbody className="divide-y divide-line">
               {filteredSuppliers.map((supplier) => (
                 <tr
                   key={supplier.id}
-                  className="transition hover:bg-white/[0.025]"
+                  className="transition hover:bg-hover"
                 >
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
@@ -556,7 +556,7 @@ export default function SuppliersPageContent() {
                       </div>
 
                       <div className="min-w-0">
-                        <p className="max-w-[220px] truncate text-sm font-semibold text-white">
+                        <p className="max-w-[220px] truncate text-sm font-semibold text-ink">
                           {supplier.companyName}
                         </p>
                         <p className="mt-1 text-[11px] text-muted">
@@ -567,7 +567,7 @@ export default function SuppliersPageContent() {
                   </td>
 
                   <td className="px-5 py-4">
-                    <p className="text-sm text-gray-300">
+                    <p className="text-sm text-ink-soft">
                       {supplier.contactPerson}
                     </p>
                     <p className="mt-1 text-xs text-muted">
@@ -576,8 +576,8 @@ export default function SuppliersPageContent() {
                   </td>
 
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-1.5 text-sm text-gray-300">
-                      <MapPin size={14} className="text-gray-500" />
+                    <div className="flex items-center gap-1.5 text-sm text-ink-soft">
+                      <MapPin size={14} className="text-muted" />
                       {supplier.location}
                     </div>
                   </td>
@@ -624,7 +624,7 @@ export default function SuppliersPageContent() {
           {filteredSuppliers.map((supplier) => (
             <div
               key={supplier.id}
-              className="rounded-xl border border-white/10 bg-white/[0.025] p-4"
+              className="rounded-xl border border-line bg-surface-soft p-4"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
@@ -633,7 +633,7 @@ export default function SuppliersPageContent() {
                   </div>
 
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-white">
+                    <p className="truncate text-sm font-semibold text-ink">
                       {supplier.companyName}
                     </p>
                     <p className="mt-1 text-xs text-muted">
@@ -645,7 +645,7 @@ export default function SuppliersPageContent() {
                 <StatusBadge status={supplier.status} />
               </div>
 
-              <div className="mt-4 space-y-2 text-xs text-gray-400">
+              <div className="mt-4 space-y-2 text-xs text-muted">
                 <p className="flex items-center gap-2">
                   <UserRound size={14} />
                   {supplier.contactPerson}
@@ -664,10 +664,10 @@ export default function SuppliersPageContent() {
                 </p>
               </div>
 
-              <div className="mt-4 flex gap-2 border-t border-white/10 pt-3">
+              <div className="mt-4 flex gap-2 border-t border-line pt-3">
                 <button
                   onClick={() => openDetails(supplier)}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/10 py-2 text-xs text-gray-300 hover:bg-white/5"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-line py-2 text-xs text-ink-soft hover:bg-hover"
                 >
                   <Eye size={14} />
                   View
@@ -675,7 +675,7 @@ export default function SuppliersPageContent() {
 
                 <button
                   onClick={() => openEditModal(supplier)}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/10 py-2 text-xs text-gray-300 hover:bg-white/5"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-line py-2 text-xs text-ink-soft hover:bg-hover"
                 >
                   <Pencil size={14} />
                   Edit
@@ -700,10 +700,10 @@ export default function SuppliersPageContent() {
             }
           }}
         >
-          <div className="glass-panel max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#17172b] px-5 py-4">
+          <div className="glass-panel max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-line shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-elevated px-5 py-4">
               <div>
-                <h2 className="font-semibold text-white">
+                <h2 className="font-semibold text-ink">
                   {editingSupplier ? "Edit Supplier" : "Add New Supplier"}
                 </h2>
                 <p className="mt-1 text-xs text-muted">
@@ -713,7 +713,7 @@ export default function SuppliersPageContent() {
 
               <button
                 onClick={() => setModalOpen(false)}
-                className="rounded-lg p-2 text-gray-400 hover:bg-white/10 hover:text-white"
+                className="rounded-lg p-2 text-muted hover:bg-hover hover:text-ink"
                 aria-label="Close supplier form"
               >
                 <X size={18} />
@@ -784,12 +784,12 @@ export default function SuppliersPageContent() {
                 </div>
               </div>
 
-              <div className="border-t border-white/10 pt-5">
+              <div className="border-t border-line pt-5">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-violet-300">
                   Supply information
                 </p>
 
-                <label className="mb-2 block text-xs font-medium text-gray-300">
+                <label className="mb-2 block text-xs font-medium text-ink-soft">
                   Products supplied
                 </label>
 
@@ -799,7 +799,7 @@ export default function SuppliersPageContent() {
                   onChange={handleChange}
                   rows={3}
                   placeholder="Separate product names with commas, e.g. Paracetamol 500mg, Vitamin C 1000mg"
-                  className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-violet-500/50"
+                  className="w-full resize-none rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-violet-500/50"
                 />
 
                 <p className="mt-2 text-[11px] text-muted">
@@ -807,7 +807,7 @@ export default function SuppliersPageContent() {
                 </p>
 
                 <div className="mt-4">
-                  <label className="mb-2 block text-xs font-medium text-gray-300">
+                  <label className="mb-2 block text-xs font-medium text-ink-soft">
                     Supplier status
                   </label>
 
@@ -815,7 +815,7 @@ export default function SuppliersPageContent() {
                     name="status"
                     value={form.status}
                     onChange={handleChange}
-                    className="w-full rounded-xl border border-white/10 bg-[#17172b] px-4 py-3 text-sm text-white outline-none focus:border-violet-500/50"
+                    className="w-full rounded-xl border border-line bg-elevated px-4 py-3 text-sm text-ink outline-none focus:border-violet-500/50"
                   >
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
@@ -823,8 +823,8 @@ export default function SuppliersPageContent() {
                 </div>
               </div>
 
-              <div className="border-t border-white/10 pt-5">
-                <label className="mb-2 block text-xs font-medium text-gray-300">
+              <div className="border-t border-line pt-5">
+                <label className="mb-2 block text-xs font-medium text-ink-soft">
                   Internal notes
                 </label>
 
@@ -834,15 +834,15 @@ export default function SuppliersPageContent() {
                   onChange={handleChange}
                   rows={2}
                   placeholder="Additional information about this supplier..."
-                  className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-violet-500/50"
+                  className="w-full resize-none rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-violet-500/50"
                 />
               </div>
 
-              <div className="flex flex-col-reverse gap-3 border-t border-white/10 pt-5 sm:flex-row sm:justify-end">
+              <div className="flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="rounded-xl border border-white/10 px-5 py-3 text-sm font-medium text-gray-300 transition hover:bg-white/5"
+                  className="rounded-xl border border-line px-5 py-3 text-sm font-medium text-ink-soft transition hover:bg-hover"
                 >
                   Cancel
                 </button>
@@ -875,15 +875,15 @@ export default function SuppliersPageContent() {
             }
           }}
         >
-          <div className="glass-panel max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-white/10 shadow-2xl">
-            <div className="flex items-start justify-between border-b border-white/10 p-5">
+          <div className="glass-panel max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-line shadow-2xl">
+            <div className="flex items-start justify-between border-b border-line p-5">
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10 text-violet-300">
                   <Building2 size={23} />
                 </div>
 
                 <div>
-                  <h2 className="font-semibold text-white">
+                  <h2 className="font-semibold text-ink">
                     {selectedSupplier.companyName}
                   </h2>
                   <p className="mt-1 text-xs text-muted">
@@ -894,7 +894,7 @@ export default function SuppliersPageContent() {
 
               <button
                 onClick={closeDetails}
-                className="rounded-lg p-2 text-gray-400 hover:bg-white/10 hover:text-white"
+                className="rounded-lg p-2 text-muted hover:bg-hover hover:text-ink"
                 aria-label="Close supplier details"
               >
                 <X size={18} />
@@ -953,9 +953,9 @@ export default function SuppliersPageContent() {
                 />
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+              <div className="rounded-xl border border-line bg-surface-soft p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-white">
+                  <h3 className="text-sm font-semibold text-ink">
                     Supplied products
                   </h3>
                   <span className="text-xs text-muted">
@@ -969,7 +969,7 @@ export default function SuppliersPageContent() {
                       (product, index) => (
                         <div
                           key={`${product}-${index}`}
-                          className="flex items-center gap-2 text-sm text-gray-300"
+                          className="flex items-center gap-2 text-sm text-ink-soft"
                         >
                           <Package
                             size={15}
@@ -987,15 +987,15 @@ export default function SuppliersPageContent() {
                 )}
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+              <div className="rounded-xl border border-line bg-surface-soft p-4">
                 <div className="mb-2 flex items-center gap-2">
                   <FileText size={15} className="text-violet-300" />
-                  <h3 className="text-sm font-semibold text-white">
+                  <h3 className="text-sm font-semibold text-ink">
                     Internal notes
                   </h3>
                 </div>
 
-                <p className="text-sm leading-6 text-gray-400">
+                <p className="text-sm leading-6 text-muted">
                   {selectedSupplier.notes || "No notes recorded."}
                 </p>
               </div>
@@ -1034,7 +1034,7 @@ function StatCard({
   };
 
   return (
-    <div className="glass-card rounded-2xl border border-white/[0.07] p-5 transition hover:-translate-y-1 hover:border-violet-500/20">
+    <div className="glass-card rounded-2xl border border-line p-5 transition hover:-translate-y-1 hover:border-violet-500/20">
       <div className="flex items-center justify-between">
         <p className="text-xs font-medium text-muted">{label}</p>
 
@@ -1045,7 +1045,7 @@ function StatCard({
         </div>
       </div>
 
-      <p className="mt-4 text-2xl font-bold tracking-tight text-white">
+      <p className="mt-4 text-2xl font-bold tracking-tight text-ink">
         {value}
       </p>
 
@@ -1065,7 +1065,7 @@ function StatusBadge({ status }) {
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${
         active
           ? "border border-emerald-400/10 bg-emerald-500/10 text-emerald-300"
-          : "border border-gray-400/10 bg-gray-500/10 text-gray-400"
+          : "border border-gray-400/10 bg-gray-500/10 text-muted"
       }`}
     >
       <span
@@ -1091,7 +1091,7 @@ function FormField({
     <div>
       <label
         htmlFor={name}
-        className="mb-2 block text-xs font-medium text-gray-300"
+        className="mb-2 block text-xs font-medium text-ink-soft"
       >
         {label}
       </label>
@@ -1103,7 +1103,7 @@ function FormField({
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-violet-500/50"
+        className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-violet-500/50"
       />
     </div>
   );
@@ -1112,13 +1112,13 @@ function FormField({
 // Reusable supplier detail field.
 function DetailItem({ icon: Icon, label, value }) {
   return (
-    <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
+    <div className="rounded-xl border border-line bg-surface-soft p-3">
       <div className="mb-2 flex items-center gap-2 text-[11px] text-muted">
         <Icon size={14} />
         {label}
       </div>
 
-      <p className="break-words text-sm font-medium text-gray-200">
+      <p className="break-words text-sm font-medium text-ink">
         {value}
       </p>
     </div>
@@ -1132,7 +1132,7 @@ function ActionButton({ children, title, onClick }) {
       type="button"
       title={title}
       onClick={onClick}
-      className="rounded-lg border border-white/10 p-2 text-gray-400 transition hover:border-violet-400/20 hover:bg-violet-500/10 hover:text-violet-300"
+      className="rounded-lg border border-line p-2 text-muted transition hover:border-violet-400/20 hover:bg-violet-500/10 hover:text-violet-300"
     >
       {children}
     </button>
@@ -1143,11 +1143,11 @@ function ActionButton({ children, title, onClick }) {
 function EmptyState({ onAdd }) {
   return (
     <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04] text-gray-500">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface text-muted">
         <Truck size={25} />
       </div>
 
-      <h3 className="font-semibold text-white">
+      <h3 className="font-semibold text-ink">
         No suppliers found
       </h3>
 

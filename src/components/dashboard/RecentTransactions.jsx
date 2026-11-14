@@ -29,7 +29,7 @@ export default function RecentTransactions() {
         <table className="w-full min-w-[650px] text-left">
 
           <thead>
-            <tr className="border-b border-white/[0.07] text-[10px] uppercase tracking-wider text-muted">
+            <tr className="border-b border-line text-[10px] uppercase tracking-wider text-muted">
               <th className="pb-4 font-medium">Transaction</th>
               <th className="pb-4 font-medium">Customer</th>
               <th className="pb-4 font-medium">Payment</th>
@@ -43,7 +43,7 @@ export default function RecentTransactions() {
             {recentTransactions.map((transaction) => (
               <tr
                 key={transaction.id}
-                className="border-b border-white/[0.04] last:border-0"
+                className="border-b border-line last:border-0"
               >
                 <td className="py-4">
                   <p className="text-xs font-semibold">
@@ -55,11 +55,11 @@ export default function RecentTransactions() {
                   </p>
                 </td>
 
-                <td className="py-4 text-xs text-gray-300">
+                <td className="py-4 text-xs text-ink-soft">
                   {transaction.customer}
                 </td>
 
-                <td className="py-4 text-xs text-gray-300">
+                <td className="py-4 text-xs text-ink-soft">
                   {transaction.payment}
                 </td>
 

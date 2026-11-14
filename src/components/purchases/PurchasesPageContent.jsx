@@ -17,15 +17,16 @@ import {
   Eye,
   Pencil,
   Package,
+  PackageCheck,
   CalendarDays,
   Building2,
-  ArrowLeft,
   Save,
   AlertCircle,
   Filter,
 } from "lucide-react";
 
 import { usePharmacy } from "@/context/PharmacyContext";
+import ReceiveStockModal from "@/components/purchases/ReceiveStockModal";
 
 const PURCHASE_STORAGE_KEY = "mediflow_purchase_orders";
 const SUPPLIER_STORAGE_KEY = "mediflow_suppliers";
@@ -47,32 +48,30 @@ const formatMoney = (amount) =>
 const formatDate = (date) => {
   if (!date) return "—";
 
-  return new Date(`${date}T00:00:00`).toLocaleDateString(
-    "en-GB",
-    {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }
-  );
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 };
 
 const getOrderStatus = (order) => {
   if (order.status === "Received") return "Received";
-  if (order.status === "Partially Received") {
-    return "Partially Received";
-  }
+  if (order.status === "Partially Received") return "Partially Received";
   if (order.status === "Ordered") return "Ordered";
 
   return "Draft";
 };
 
 export default function PurchasesPageContent() {
-  const { medicines, loaded: pharmacyLoaded } = usePharmacy();
+  const {
+    medicines,
+    loaded: pharmacyLoaded,
+    updateMedicine,
+  } = usePharmacy();
 
   const [suppliers, setSuppliers] = useState([]);
   const [orders, setOrders] = useState([]);
-
   const [loaded, setLoaded] = useState(false);
 
   const [search, setSearch] = useState("");
@@ -83,23 +82,20 @@ export default function PurchasesPageContent() {
 
   const [editingOrder, setEditingOrder] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [receivingOrder, setReceivingOrder] = useState(null);
 
   const [form, setForm] = useState(emptyOrderForm);
   const [orderItems, setOrderItems] = useState([]);
 
   const [saving, setSaving] = useState(false);
+  const [receiving, setReceiving] = useState(false);
   const [error, setError] = useState("");
 
   // Load purchase orders and suppliers from localStorage.
   useEffect(() => {
     try {
-      const savedOrders = localStorage.getItem(
-        PURCHASE_STORAGE_KEY
-      );
-
-      const savedSuppliers = localStorage.getItem(
-        SUPPLIER_STORAGE_KEY
-      );
+      const savedOrders = localStorage.getItem(PURCHASE_STORAGE_KEY);
+      const savedSuppliers = localStorage.getItem(SUPPLIER_STORAGE_KEY);
 
       if (savedOrders) {
         const parsedOrders = JSON.parse(savedOrders);
@@ -123,7 +119,7 @@ export default function PurchasesPageContent() {
     }
   }, []);
 
-  // Persist purchase orders.
+  // Persist purchase orders whenever they change.
   useEffect(() => {
     if (!loaded) return;
 
@@ -144,7 +140,9 @@ export default function PurchasesPageContent() {
     ).length;
 
     const pending = orders.filter(
-      (order) => order.status === "Ordered"
+      (order) =>
+        order.status === "Ordered" ||
+        order.status === "Partially Received"
     ).length;
 
     const received = orders.filter(
@@ -165,19 +163,18 @@ export default function PurchasesPageContent() {
     };
   }, [orders]);
 
-  // Search and filter orders.
+  // Search and filter purchase orders.
   const filteredOrders = useMemo(() => {
     const query = search.trim().toLowerCase();
 
     return orders.filter((order) => {
       const matchesSearch =
         !query ||
-        order.orderNumber.toLowerCase().includes(query) ||
-        order.supplierName.toLowerCase().includes(query);
+        String(order.orderNumber || "").toLowerCase().includes(query) ||
+        String(order.supplierName || "").toLowerCase().includes(query);
 
       const matchesStatus =
-        statusFilter === "All" ||
-        order.status === statusFilter;
+        statusFilter === "All" || order.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
@@ -187,18 +184,19 @@ export default function PurchasesPageContent() {
     items.reduce(
       (total, item) =>
         total +
-        Number(item.quantity || 0) *
-          Number(item.unitPrice || 0),
+        Number(item.quantity || 0) * Number(item.unitPrice || 0),
       0
     );
 
-  // Start a fresh purchase order.
+  // Start a new purchase order.
   const openCreateModal = () => {
     setEditingOrder(null);
+
     setForm({
       ...emptyOrderForm,
       orderDate: new Date().toISOString().slice(0, 10),
     });
+
     setOrderItems([]);
     setError("");
     setModalOpen(true);
@@ -229,7 +227,9 @@ export default function PurchasesPageContent() {
   const addOrderItem = () => {
     const availableMedicines = medicines.filter(
       (medicine) =>
-        !orderItems.some((item) => item.medicineId === medicine.id)
+        !orderItems.some(
+          (item) => String(item.medicineId) === String(medicine.id)
+        )
     );
 
     if (availableMedicines.length === 0) {
@@ -253,7 +253,7 @@ export default function PurchasesPageContent() {
     setError("");
   };
 
-  // Change an item's medicine.
+  // Change the medicine selected for an order item.
   const changeMedicine = (index, medicineId) => {
     const medicine = medicines.find(
       (item) => String(item.id) === String(medicineId)
@@ -281,10 +281,7 @@ export default function PurchasesPageContent() {
     setOrderItems((previous) =>
       previous.map((item, itemIndex) =>
         itemIndex === index
-          ? {
-              ...item,
-              [field]: value,
-            }
+          ? { ...item, [field]: value }
           : item
       )
     );
@@ -333,7 +330,7 @@ export default function PurchasesPageContent() {
     }
 
     const supplier = suppliers.find(
-      (item) => item.id === form.supplierId
+      (item) => String(item.id) === String(form.supplierId)
     );
 
     if (!supplier) {
@@ -382,6 +379,8 @@ export default function PurchasesPageContent() {
           ...item,
           quantity: Number(item.quantity),
           unitPrice: Number(item.unitPrice),
+          receivedQuantity: 0,
+          receipts: [],
         })),
         total,
         status: "Draft",
@@ -417,6 +416,199 @@ export default function PurchasesPageContent() {
     setSelectedOrder(updated);
   };
 
+  // Receive stock against an existing purchase order.
+  const handleReceiveStock = async (receivedItems) => {
+    if (!pharmacyLoaded) {
+      throw new Error("Inventory data is still loading. Please try again.");
+    }
+
+    if (!receivingOrder) {
+      throw new Error("No purchase order is currently selected.");
+    }
+
+    const currentOrder = orders.find(
+      (order) => order.id === receivingOrder.id
+    );
+
+    if (!currentOrder) {
+      throw new Error("The purchase order could not be found.");
+    }
+
+    if (
+      !["Ordered", "Partially Received"].includes(currentOrder.status)
+    ) {
+      throw new Error("This purchase order cannot receive stock.");
+    }
+
+    if (!Array.isArray(receivedItems) || receivedItems.length === 0) {
+      throw new Error("Enter at least one delivery item.");
+    }
+
+    setReceiving(true);
+
+    try {
+      const receivedAt = new Date().toISOString();
+
+      // Validate every delivery before changing inventory.
+      const validatedItems = receivedItems.map((receivedItem) => {
+        const orderItem = currentOrder.items.find(
+          (item) =>
+            String(item.medicineId) === String(receivedItem.medicineId)
+        );
+
+        if (!orderItem) {
+          throw new Error("A received medicine is not part of this order.");
+        }
+
+        const alreadyReceived = Number(orderItem.receivedQuantity || 0);
+        const remaining =
+          Number(orderItem.quantity) - alreadyReceived;
+
+        const quantity = Number(receivedItem.quantity);
+        const unitPrice = Number(receivedItem.unitPrice);
+        const batchNumber = String(
+          receivedItem.batchNumber || ""
+        ).trim();
+        const expiryDate = receivedItem.expiryDate;
+
+        if (!Number.isInteger(quantity) || quantity <= 0) {
+          throw new Error(
+            `Enter a valid whole-number quantity for ${orderItem.medicineName}.`
+          );
+        }
+
+        if (quantity > remaining) {
+          throw new Error(
+            `You can only receive ${remaining} more units of ${orderItem.medicineName}.`
+          );
+        }
+
+        if (!batchNumber) {
+          throw new Error(
+            `Enter a batch number for ${orderItem.medicineName}.`
+          );
+        }
+
+        if (
+          !expiryDate ||
+          Number.isNaN(new Date(`${expiryDate}T00:00:00`).getTime())
+        ) {
+          throw new Error(
+            `Enter a valid expiry date for ${orderItem.medicineName}.`
+          );
+        }
+
+        if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+          throw new Error(
+            `Enter a valid purchase price for ${orderItem.medicineName}.`
+          );
+        }
+
+        const medicine = medicines.find(
+          (item) =>
+            String(item.id) === String(orderItem.medicineId)
+        );
+
+        if (!medicine) {
+          throw new Error(
+            `${orderItem.medicineName} could not be found in inventory.`
+          );
+        }
+
+        return {
+          orderItem,
+          medicine,
+          quantity,
+          unitPrice,
+          batchNumber,
+          expiryDate,
+        };
+      });
+
+      // Add each received delivery as a new inventory batch.
+      validatedItems.forEach((item) => {
+        const newBatch = {
+          id: `BATCH-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 7)}`,
+          batchNumber: item.batchNumber,
+          quantity: item.quantity,
+          expiryDate: item.expiryDate,
+          purchasePrice: item.unitPrice,
+          supplierName: currentOrder.supplierName,
+          supplierId: currentOrder.supplierId,
+          purchaseOrderNumber: currentOrder.orderNumber,
+          receivedAt,
+        };
+
+        updateMedicine({
+          id: item.medicine.id,
+          batches: [
+            ...(item.medicine.batches || []),
+            newBatch,
+          ],
+        });
+      });
+
+      // Update cumulative received quantities and delivery history.
+      const updatedItems = currentOrder.items.map((orderItem) => {
+        const delivery = validatedItems.find(
+          (item) =>
+            String(item.orderItem.medicineId) ===
+            String(orderItem.medicineId)
+        );
+
+        if (!delivery) return orderItem;
+
+        const receipt = {
+          id: `RECEIPT-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 7)}`,
+          batchNumber: delivery.batchNumber,
+          quantity: delivery.quantity,
+          unitPrice: delivery.unitPrice,
+          expiryDate: delivery.expiryDate,
+          receivedAt,
+        };
+
+        return {
+          ...orderItem,
+          receivedQuantity:
+            Number(orderItem.receivedQuantity || 0) +
+            delivery.quantity,
+          receipts: [
+            ...(orderItem.receipts || []),
+            receipt,
+          ],
+        };
+      });
+
+      const fullyReceived = updatedItems.every(
+        (item) =>
+          Number(item.receivedQuantity || 0) >=
+          Number(item.quantity)
+      );
+
+      const updatedOrder = {
+        ...currentOrder,
+        items: updatedItems,
+        status: fullyReceived ? "Received" : "Partially Received",
+        updatedAt: receivedAt,
+      };
+
+      setOrders((previous) =>
+        previous.map((order) =>
+          order.id === updatedOrder.id ? updatedOrder : order
+        )
+      );
+
+      setSelectedOrder(updatedOrder);
+      setReceivingOrder(null);
+    } finally {
+      setReceiving(false);
+    }
+  };
+
   const openDetails = (order) => {
     setSelectedOrder(order);
     setDetailsOpen(true);
@@ -430,16 +622,18 @@ export default function PurchasesPageContent() {
   if (!loaded || !pharmacyLoaded) {
     return (
       <div className="animate-pulse space-y-6">
-        <div className="h-9 w-56 rounded-lg bg-white/10" />
+        <div className="h-9 w-56 rounded-lg bg-surface-strong" />
+
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[1, 2, 3, 4].map((item) => (
             <div
               key={item}
-              className="h-28 rounded-2xl bg-white/[0.05]"
+              className="h-28 rounded-2xl bg-surface"
             />
           ))}
         </div>
-        <div className="h-80 rounded-2xl bg-white/[0.05]" />
+
+        <div className="h-80 rounded-2xl bg-surface" />
       </div>
     );
   }
@@ -455,7 +649,7 @@ export default function PurchasesPageContent() {
             <span className="text-violet-300">Purchases</span>
           </div>
 
-          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
             Purchase Management
           </h1>
 
@@ -466,9 +660,11 @@ export default function PurchasesPageContent() {
 
         <button
           onClick={openCreateModal}
-          disabled={suppliers.filter(
-            (supplier) => supplier.status === "Active"
-          ).length === 0}
+          disabled={
+            suppliers.filter(
+              (supplier) => supplier.status === "Active"
+            ).length === 0
+          }
           className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus size={18} />
@@ -482,11 +678,16 @@ export default function PurchasesPageContent() {
       ).length === 0 && (
         <div className="flex flex-col gap-3 rounded-xl border border-amber-400/20 bg-amber-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
-            <AlertCircle size={19} className="mt-0.5 text-amber-300" />
+            <AlertCircle
+              size={19}
+              className="mt-0.5 text-amber-300"
+            />
+
             <div>
               <p className="text-sm font-semibold text-amber-200">
                 No active suppliers available
               </p>
+
               <p className="mt-1 text-xs text-amber-200/70">
                 Register or activate a supplier before creating a purchase order.
               </p>
@@ -534,16 +735,18 @@ export default function PurchasesPageContent() {
       </div>
 
       {/* Order value overview */}
-      <div className="glass-card flex flex-col justify-between gap-4 rounded-2xl border border-white/[0.07] p-5 sm:flex-row sm:items-center">
+      <div className="glass-card flex flex-col justify-between gap-4 rounded-2xl border border-line p-5 sm:flex-row sm:items-center">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10 text-violet-300">
             <ShoppingBasket size={22} />
           </div>
+
           <div>
             <p className="text-xs text-muted">
               Total purchase order value
             </p>
-            <p className="mt-1 text-2xl font-bold text-white">
+
+            <p className="mt-1 text-2xl font-bold text-ink">
               {formatMoney(stats.totalValue)}
             </p>
           </div>
@@ -556,11 +759,12 @@ export default function PurchasesPageContent() {
 
       {/* Purchase order directory */}
       <section className="glass-panel overflow-hidden rounded-2xl">
-        <div className="flex flex-col gap-4 border-b border-white/10 p-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-4 border-b border-line p-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="font-semibold text-white">
+            <h2 className="font-semibold text-ink">
               Purchase Orders
             </h2>
+
             <p className="mt-1 text-xs text-muted">
               {filteredOrders.length} orders found
             </p>
@@ -570,27 +774,29 @@ export default function PurchasesPageContent() {
             <div className="relative">
               <Search
                 size={17}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
               />
+
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search order or supplier..."
-                className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-4 text-sm text-white outline-none placeholder:text-gray-500 focus:border-violet-500/50 sm:w-64"
+                className="w-full rounded-xl border border-line bg-surface py-2.5 pl-10 pr-4 text-sm text-ink outline-none placeholder:text-muted focus:border-violet-500/50 sm:w-64"
               />
             </div>
 
             <div className="relative">
               <Filter
                 size={15}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
               />
+
               <select
                 value={statusFilter}
                 onChange={(event) =>
                   setStatusFilter(event.target.value)
                 }
-                className="w-full appearance-none rounded-xl border border-white/10 bg-[#17172b] py-2.5 pl-9 pr-8 text-sm text-gray-300 outline-none focus:border-violet-500/50 sm:w-44"
+                className="w-full appearance-none rounded-xl border border-line bg-elevated py-2.5 pl-9 pr-8 text-sm text-ink-soft outline-none focus:border-violet-500/50 sm:w-44"
               >
                 <option value="All">All statuses</option>
                 <option value="Draft">Draft</option>
@@ -606,7 +812,7 @@ export default function PurchasesPageContent() {
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[850px] text-left">
             <thead>
-              <tr className="border-b border-white/10 bg-white/[0.025] text-[10px] uppercase tracking-wider text-gray-500">
+              <tr className="border-b border-line bg-surface-soft text-[10px] uppercase tracking-wider text-muted">
                 <th className="px-5 py-4 font-semibold">Order</th>
                 <th className="px-5 py-4 font-semibold">Supplier</th>
                 <th className="px-5 py-4 font-semibold">Order date</th>
@@ -617,34 +823,35 @@ export default function PurchasesPageContent() {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-white/[0.06]">
+            <tbody className="divide-y divide-line">
               {filteredOrders.map((order) => (
                 <tr
                   key={order.id}
-                  className="transition hover:bg-white/[0.025]"
+                  className="transition hover:bg-hover"
                 >
                   <td className="px-5 py-4">
-                    <p className="text-sm font-semibold text-white">
+                    <p className="text-sm font-semibold text-ink">
                       {order.orderNumber}
                     </p>
+
                     <p className="mt-1 text-[11px] text-muted">
                       {order.id}
                     </p>
                   </td>
 
-                  <td className="px-5 py-4 text-sm text-gray-300">
+                  <td className="px-5 py-4 text-sm text-ink-soft">
                     {order.supplierName}
                   </td>
 
-                  <td className="px-5 py-4 text-sm text-gray-400">
+                  <td className="px-5 py-4 text-sm text-muted">
                     {formatDate(order.orderDate)}
                   </td>
 
-                  <td className="px-5 py-4 text-sm text-gray-300">
+                  <td className="px-5 py-4 text-sm text-ink-soft">
                     {order.items.length} items
                   </td>
 
-                  <td className="px-5 py-4 text-sm font-semibold text-white">
+                  <td className="px-5 py-4 text-sm font-semibold text-ink">
                     {formatMoney(order.total)}
                   </td>
 
@@ -686,45 +893,49 @@ export default function PurchasesPageContent() {
           {filteredOrders.map((order) => (
             <div
               key={order.id}
-              className="rounded-xl border border-white/10 bg-white/[0.025] p-4"
+              className="rounded-xl border border-line bg-surface-soft p-4"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-white">
+                  <p className="text-sm font-semibold text-ink">
                     {order.orderNumber}
                   </p>
+
                   <p className="mt-1 text-xs text-muted">
                     {order.supplierName}
                   </p>
                 </div>
+
                 <OrderStatus status={getOrderStatus(order)} />
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
                 <div>
                   <p className="text-muted">Order date</p>
-                  <p className="mt-1 text-gray-300">
+                  <p className="mt-1 text-ink-soft">
                     {formatDate(order.orderDate)}
                   </p>
                 </div>
+
                 <div>
                   <p className="text-muted">Items</p>
-                  <p className="mt-1 text-gray-300">
+                  <p className="mt-1 text-ink-soft">
                     {order.items.length}
                   </p>
                 </div>
+
                 <div className="col-span-2">
                   <p className="text-muted">Total</p>
-                  <p className="mt-1 font-semibold text-white">
+                  <p className="mt-1 font-semibold text-ink">
                     {formatMoney(order.total)}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-4 flex gap-2 border-t border-white/10 pt-3">
+              <div className="mt-4 flex gap-2 border-t border-line pt-3">
                 <button
                   onClick={() => openDetails(order)}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/10 py-2 text-xs text-gray-300 hover:bg-white/5"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-line py-2 text-xs text-ink-soft hover:bg-hover"
                 >
                   <Eye size={14} />
                   View
@@ -733,7 +944,7 @@ export default function PurchasesPageContent() {
                 {order.status === "Draft" && (
                   <button
                     onClick={() => openEditModal(order)}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/10 py-2 text-xs text-gray-300 hover:bg-white/5"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-line py-2 text-xs text-ink-soft hover:bg-hover"
                   >
                     <Pencil size={14} />
                     Edit
@@ -759,12 +970,13 @@ export default function PurchasesPageContent() {
             }
           }}
         >
-          <div className="glass-panel max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-white/10 shadow-2xl">
-            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-white/10 bg-[#17172b] px-5 py-4">
+          <div className="glass-panel max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-line shadow-2xl">
+            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-elevated px-5 py-4">
               <div>
-                <h2 className="font-semibold text-white">
+                <h2 className="font-semibold text-ink">
                   {editingOrder ? "Edit Purchase Order" : "Create Purchase Order"}
                 </h2>
+
                 <p className="mt-1 text-xs text-muted">
                   Select a supplier and add medicines to purchase.
                 </p>
@@ -772,7 +984,7 @@ export default function PurchasesPageContent() {
 
               <button
                 onClick={() => setModalOpen(false)}
-                className="rounded-lg p-2 text-gray-400 hover:bg-white/10 hover:text-white"
+                className="rounded-lg p-2 text-muted hover:bg-hover hover:text-ink"
                 aria-label="Close purchase order form"
               >
                 <X size={18} />
@@ -794,7 +1006,7 @@ export default function PurchasesPageContent() {
 
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="sm:col-span-1">
-                    <label className="mb-2 block text-xs font-medium text-gray-300">
+                    <label className="mb-2 block text-xs font-medium text-ink-soft">
                       Supplier *
                     </label>
 
@@ -806,7 +1018,7 @@ export default function PurchasesPageContent() {
                           supplierId: event.target.value,
                         }))
                       }
-                      className="w-full rounded-xl border border-white/10 bg-[#17172b] px-4 py-3 text-sm text-white outline-none focus:border-violet-500/50"
+                      className="w-full rounded-xl border border-line bg-elevated px-4 py-3 text-sm text-ink outline-none focus:border-violet-500/50"
                     >
                       <option value="">Select supplier</option>
 
@@ -851,12 +1063,13 @@ export default function PurchasesPageContent() {
               </div>
 
               {/* Order items */}
-              <div className="border-t border-white/10 pt-5">
+              <div className="border-t border-line pt-5">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-violet-300">
                       Order items
                     </p>
+
                     <p className="mt-1 text-xs text-muted">
                       Add the medicines and quantities required.
                     </p>
@@ -873,14 +1086,16 @@ export default function PurchasesPageContent() {
                 </div>
 
                 {orderItems.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-white/15 py-10 text-center">
+                  <div className="rounded-xl border border-dashed border-line-strong py-10 text-center">
                     <Package
                       size={25}
-                      className="mx-auto text-gray-500"
+                      className="mx-auto text-muted"
                     />
-                    <p className="mt-3 text-sm font-medium text-gray-300">
+
+                    <p className="mt-3 text-sm font-medium text-ink-soft">
                       No medicines added
                     </p>
+
                     <p className="mt-1 text-xs text-muted">
                       Use Add medicine to start building your order.
                     </p>
@@ -890,10 +1105,10 @@ export default function PurchasesPageContent() {
                     {orderItems.map((item, index) => (
                       <div
                         key={`${index}-${item.medicineId}`}
-                        className="rounded-xl border border-white/10 bg-white/[0.025] p-4"
+                        className="rounded-xl border border-line bg-surface-soft p-4"
                       >
                         <div className="mb-3 flex items-center justify-between">
-                          <p className="text-xs font-semibold text-gray-300">
+                          <p className="text-xs font-semibold text-ink-soft">
                             Item {index + 1}
                           </p>
 
@@ -909,7 +1124,7 @@ export default function PurchasesPageContent() {
 
                         <div className="grid gap-3 sm:grid-cols-3">
                           <div className="sm:col-span-1">
-                            <label className="mb-2 block text-xs text-gray-400">
+                            <label className="mb-2 block text-xs text-muted">
                               Medicine
                             </label>
 
@@ -918,7 +1133,7 @@ export default function PurchasesPageContent() {
                               onChange={(event) =>
                                 changeMedicine(index, event.target.value)
                               }
-                              className="w-full rounded-lg border border-white/10 bg-[#17172b] px-3 py-2.5 text-xs text-white outline-none focus:border-violet-500/50"
+                              className="w-full rounded-lg border border-line bg-elevated px-3 py-2.5 text-xs text-ink outline-none focus:border-violet-500/50"
                             >
                               {medicines.map((medicine) => (
                                 <option
@@ -956,12 +1171,12 @@ export default function PurchasesPageContent() {
                           />
                         </div>
 
-                        <div className="mt-3 flex items-center justify-between border-t border-white/[0.07] pt-3">
+                        <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
                           <span className="text-xs text-muted">
                             Item subtotal
                           </span>
 
-                          <span className="text-sm font-semibold text-white">
+                          <span className="text-sm font-semibold text-ink">
                             {formatMoney(
                               Number(item.quantity || 0) *
                                 Number(item.unitPrice || 0)
@@ -975,9 +1190,9 @@ export default function PurchasesPageContent() {
               </div>
 
               {/* Notes and total */}
-              <div className="grid gap-5 border-t border-white/10 pt-5 lg:grid-cols-2">
+              <div className="grid gap-5 border-t border-line pt-5 lg:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-xs font-medium text-gray-300">
+                  <label className="mb-2 block text-xs font-medium text-ink-soft">
                     Order notes
                   </label>
 
@@ -991,7 +1206,7 @@ export default function PurchasesPageContent() {
                       }))
                     }
                     placeholder="Additional instructions..."
-                    className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-violet-500/50"
+                    className="w-full resize-none rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink outline-none placeholder:text-muted focus:border-violet-500/50"
                   />
                 </div>
 
@@ -1000,12 +1215,12 @@ export default function PurchasesPageContent() {
                     Order summary
                   </p>
 
-                  <div className="mt-4 flex justify-between text-xs text-gray-400">
+                  <div className="mt-4 flex justify-between text-xs text-muted">
                     <span>Total items</span>
                     <span>{orderItems.length}</span>
                   </div>
 
-                  <div className="mt-3 flex justify-between text-xs text-gray-400">
+                  <div className="mt-3 flex justify-between text-xs text-muted">
                     <span>Total units</span>
                     <span>
                       {orderItems.reduce(
@@ -1016,20 +1231,21 @@ export default function PurchasesPageContent() {
                     </span>
                   </div>
 
-                  <div className="mt-4 border-t border-white/10 pt-4">
+                  <div className="mt-4 border-t border-line pt-4">
                     <p className="text-xs text-muted">Grand total</p>
-                    <p className="mt-1 text-2xl font-bold text-white">
+
+                    <p className="mt-1 text-2xl font-bold text-ink">
                       {formatMoney(calculateTotal(orderItems))}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-col-reverse gap-3 border-t border-white/10 pt-5 sm:flex-row sm:justify-end">
+              <div className="flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="rounded-xl border border-white/10 px-5 py-3 text-sm font-medium text-gray-300 hover:bg-white/5"
+                  className="rounded-xl border border-line px-5 py-3 text-sm font-medium text-ink-soft hover:bg-hover"
                 >
                   Cancel
                 </button>
@@ -1062,13 +1278,15 @@ export default function PurchasesPageContent() {
             }
           }}
         >
-          <div className="glass-panel max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 shadow-2xl">
-            <div className="flex items-start justify-between border-b border-white/10 p-5">
+          <div className="glass-panel max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-line shadow-2xl">
+            <div className="flex items-start justify-between border-b border-line p-5">
               <div>
                 <p className="text-xs text-muted">Purchase order</p>
-                <h2 className="mt-1 text-xl font-bold text-white">
+
+                <h2 className="mt-1 text-xl font-bold text-ink">
                   {selectedOrder.orderNumber}
                 </h2>
+
                 <p className="mt-1 text-xs text-muted">
                   {selectedOrder.supplierName}
                 </p>
@@ -1076,7 +1294,7 @@ export default function PurchasesPageContent() {
 
               <button
                 onClick={closeDetails}
-                className="rounded-lg p-2 text-gray-400 hover:bg-white/10 hover:text-white"
+                className="rounded-lg p-2 text-muted hover:bg-hover hover:text-ink"
                 aria-label="Close order details"
               >
                 <X size={18} />
@@ -1098,6 +1316,7 @@ export default function PurchasesPageContent() {
                   label="Supplier"
                   value={selectedOrder.supplierName}
                 />
+
                 <DetailItem
                   icon={CalendarDays}
                   label="Expected delivery"
@@ -1106,71 +1325,156 @@ export default function PurchasesPageContent() {
               </div>
 
               <div>
-                <h3 className="mb-3 text-sm font-semibold text-white">
+                <h3 className="mb-3 text-sm font-semibold text-ink">
                   Ordered medicines
                 </h3>
 
-                <div className="overflow-x-auto rounded-xl border border-white/10">
+                <div className="overflow-x-auto rounded-xl border border-line">
                   <table className="w-full min-w-[480px] text-left">
-                    <thead className="bg-white/[0.035] text-[10px] uppercase text-gray-500">
+                    <thead className="bg-surface text-[10px] uppercase text-muted">
                       <tr>
                         <th className="px-4 py-3">Medicine</th>
-                        <th className="px-4 py-3">Qty</th>
+                        <th className="px-4 py-3">Ordered</th>
+                        <th className="px-4 py-3">Received</th>
+                        <th className="px-4 py-3">Remaining</th>
                         <th className="px-4 py-3">Unit price</th>
                         <th className="px-4 py-3 text-right">Subtotal</th>
                       </tr>
                     </thead>
 
-                    <tbody className="divide-y divide-white/[0.06]">
-                      {selectedOrder.items.map((item, index) => (
-                        <tr key={`${item.medicineId}-${index}`}>
-                          <td className="px-4 py-3 text-xs text-gray-300">
-                            {item.medicineName}
-                          </td>
-                          <td className="px-4 py-3 text-xs text-gray-300">
-                            {item.quantity}
-                          </td>
-                          <td className="px-4 py-3 text-xs text-gray-300">
-                            {formatMoney(item.unitPrice)}
-                          </td>
-                          <td className="px-4 py-3 text-right text-xs font-semibold text-white">
-                            {formatMoney(
-                              item.quantity * item.unitPrice
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                    <tbody className="divide-y divide-line">
+                      {selectedOrder.items.map((item, index) => {
+                        const received = Number(
+                          item.receivedQuantity || 0
+                        );
+
+                        const remaining = Math.max(
+                          0,
+                          Number(item.quantity) - received
+                        );
+
+                        return (
+                          <tr key={`${item.medicineId}-${index}`}>
+                            <td className="px-4 py-3 text-xs text-ink-soft">
+                              {item.medicineName}
+                            </td>
+
+                            <td className="px-4 py-3 text-xs text-ink-soft">
+                              {item.quantity}
+                            </td>
+
+                            <td className="px-4 py-3 text-xs text-emerald-300">
+                              {received}
+                            </td>
+
+                            <td className="px-4 py-3 text-xs text-amber-300">
+                              {remaining}
+                            </td>
+
+                            <td className="px-4 py-3 text-xs text-ink-soft">
+                              {formatMoney(item.unitPrice)}
+                            </td>
+
+                            <td className="px-4 py-3 text-right text-xs font-semibold text-ink">
+                              {formatMoney(
+                                item.quantity * item.unitPrice
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
-                <p className="text-xs text-muted">Total order value</p>
-                <p className="mt-1 text-2xl font-bold text-white">
+              {/* Delivery progress */}
+              {selectedOrder.status !== "Draft" && (
+                <div className="rounded-xl border border-line bg-surface-soft p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-xs font-semibold text-ink-soft">
+                      Delivery progress
+                    </p>
+
+                    <span className="text-xs text-muted">
+                      {selectedOrder.items.reduce(
+                        (sum, item) =>
+                          sum + Number(item.receivedQuantity || 0),
+                        0
+                      )}{" "}
+                      /{" "}
+                      {selectedOrder.items.reduce(
+                        (sum, item) =>
+                          sum + Number(item.quantity || 0),
+                        0
+                      )}{" "}
+                      units
+                    </span>
+                  </div>
+
+                  {(() => {
+                    const orderedUnits = selectedOrder.items.reduce(
+                      (sum, item) => sum + Number(item.quantity || 0),
+                      0
+                    );
+
+                    const receivedUnits = selectedOrder.items.reduce(
+                      (sum, item) =>
+                        sum + Number(item.receivedQuantity || 0),
+                      0
+                    );
+
+                    const progress =
+                      orderedUnits > 0
+                        ? Math.min(
+                            100,
+                            (receivedUnits / orderedUnits) * 100
+                          )
+                        : 0;
+
+                    return (
+                      <div className="h-2 overflow-hidden rounded-full bg-surface-strong">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-violet-500 to-emerald-400 transition-all"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              <div className="rounded-xl border border-line bg-surface-soft p-4">
+                <p className="text-xs text-muted">
+                  Total order value
+                </p>
+
+                <p className="mt-1 text-2xl font-bold text-ink">
                   {formatMoney(selectedOrder.total)}
                 </p>
               </div>
 
               {selectedOrder.notes && (
                 <div>
-                  <p className="mb-2 text-xs font-semibold text-gray-300">
+                  <p className="mb-2 text-xs font-semibold text-ink-soft">
                     Notes
                   </p>
-                  <p className="text-sm leading-6 text-gray-400">
+
+                  <p className="text-sm leading-6 text-muted">
                     {selectedOrder.notes}
                   </p>
                 </div>
               )}
 
+              {/* Draft actions */}
               {selectedOrder.status === "Draft" && (
-                <div className="flex flex-col-reverse gap-3 border-t border-white/10 pt-5 sm:flex-row sm:justify-end">
+                <div className="flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:justify-end">
                   <button
                     onClick={() => {
                       closeDetails();
                       openEditModal(selectedOrder);
                     }}
-                    className="flex items-center justify-center gap-2 rounded-xl border border-white/10 px-5 py-3 text-sm text-gray-300 hover:bg-white/5"
+                    className="flex items-center justify-center gap-2 rounded-xl border border-line px-5 py-3 text-sm text-ink-soft hover:bg-hover"
                   >
                     <Pencil size={15} />
                     Edit Draft
@@ -1185,9 +1489,46 @@ export default function PurchasesPageContent() {
                   </button>
                 </div>
               )}
+
+              {/* Receive stock action */}
+              {["Ordered", "Partially Received"].includes(
+                selectedOrder.status
+              ) && (
+                <div className="flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:justify-end">
+                  <button
+                    onClick={() => {
+                      setReceivingOrder(selectedOrder);
+                    }}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500"
+                  >
+                    <PackageCheck size={17} />
+                    Receive Stock
+                  </button>
+                </div>
+              )}
+
+              {selectedOrder.status === "Received" && (
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-400/15 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+                  <CheckCircle2 size={16} />
+                  All items in this purchase order have been received.
+                </div>
+              )}
             </div>
           </div>
         </div>
+      )}
+
+      {/* Receive stock modal */}
+      {receivingOrder && (
+        <ReceiveStockModal
+          order={receivingOrder}
+          onClose={() => {
+            if (!receiving) {
+              setReceivingOrder(null);
+            }
+          }}
+          onConfirm={handleReceiveStock}
+        />
       )}
     </div>
   );
@@ -1203,7 +1544,7 @@ function StatCard({ label, value, icon: Icon, color }) {
   };
 
   return (
-    <div className="glass-card rounded-2xl border border-white/[0.07] p-5 transition hover:-translate-y-1 hover:border-violet-500/20">
+    <div className="glass-card rounded-2xl border border-line p-5 transition hover:-translate-y-1 hover:border-violet-500/20">
       <div className="flex items-center justify-between">
         <p className="text-xs font-medium text-muted">{label}</p>
 
@@ -1214,9 +1555,7 @@ function StatCard({ label, value, icon: Icon, color }) {
         </div>
       </div>
 
-      <p className="mt-4 text-2xl font-bold text-white">
-        {value}
-      </p>
+      <p className="mt-4 text-2xl font-bold text-ink">{value}</p>
     </div>
   );
 }
@@ -1224,7 +1563,7 @@ function StatCard({ label, value, icon: Icon, color }) {
 // Purchase order status badge.
 function OrderStatus({ status }) {
   const styles = {
-    Draft: "bg-gray-500/10 text-gray-300 border-gray-400/10",
+    Draft: "bg-gray-500/10 text-ink-soft border-gray-400/10",
     Ordered: "bg-amber-500/10 text-amber-300 border-amber-400/10",
     "Partially Received":
       "bg-cyan-500/10 text-cyan-300 border-cyan-400/10",
@@ -1234,7 +1573,9 @@ function OrderStatus({ status }) {
 
   return (
     <span
-      className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium ${styles[status] || styles.Draft}`}
+      className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+        styles[status] || styles.Draft
+      }`}
     >
       {status}
     </span>
@@ -1245,7 +1586,7 @@ function OrderStatus({ status }) {
 function DateField({ label, value, onChange, min }) {
   return (
     <div>
-      <label className="mb-2 block text-xs font-medium text-gray-300">
+      <label className="mb-2 block text-xs font-medium text-ink-soft">
         {label}
       </label>
 
@@ -1254,7 +1595,7 @@ function DateField({ label, value, onChange, min }) {
         value={value}
         min={min}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-xl border border-white/10 bg-[#17172b] px-3 py-3 text-sm text-white outline-none focus:border-violet-500/50"
+        className="w-full rounded-xl border border-line bg-elevated px-3 py-3 text-sm text-ink outline-none focus:border-violet-500/50"
       />
     </div>
   );
@@ -1264,7 +1605,7 @@ function DateField({ label, value, onChange, min }) {
 function NumberField({ label, value, onChange, min }) {
   return (
     <div>
-      <label className="mb-2 block text-xs text-gray-400">
+      <label className="mb-2 block text-xs text-muted">
         {label}
       </label>
 
@@ -1274,7 +1615,7 @@ function NumberField({ label, value, onChange, min }) {
         step="1"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50"
+        className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-violet-500/50"
       />
     </div>
   );
@@ -1283,12 +1624,13 @@ function NumberField({ label, value, onChange, min }) {
 // Supplier/order detail field.
 function DetailItem({ icon: Icon, label, value }) {
   return (
-    <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
+    <div className="rounded-xl border border-line bg-surface-soft p-3">
       <div className="mb-2 flex items-center gap-2 text-[11px] text-muted">
         <Icon size={14} />
         {label}
       </div>
-      <p className="break-words text-sm font-medium text-gray-200">
+
+      <p className="break-words text-sm font-medium text-ink">
         {value || "—"}
       </p>
     </div>
@@ -1302,7 +1644,7 @@ function ActionButton({ children, title, onClick }) {
       type="button"
       title={title}
       onClick={onClick}
-      className="rounded-lg border border-white/10 p-2 text-gray-400 transition hover:border-violet-400/20 hover:bg-violet-500/10 hover:text-violet-300"
+      className="rounded-lg border border-line p-2 text-muted transition hover:border-violet-400/20 hover:bg-violet-500/10 hover:text-violet-300"
     >
       {children}
     </button>
@@ -1313,11 +1655,11 @@ function ActionButton({ children, title, onClick }) {
 function EmptyState({ onCreate }) {
   return (
     <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04] text-gray-500">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface text-muted">
         <ShoppingBasket size={25} />
       </div>
 
-      <h3 className="font-semibold text-white">
+      <h3 className="font-semibold text-ink">
         No purchase orders found
       </h3>
 

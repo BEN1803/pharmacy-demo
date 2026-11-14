@@ -34,7 +34,7 @@ export default function StockAlerts() {
           return (
             <div
               key={product.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.025] p-3"
+              className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-soft p-3"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <div
@@ -80,7 +80,7 @@ export default function StockAlerts() {
         })}
       </div>
 
-      <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] py-3 text-xs font-medium text-gray-300 transition hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-violet-300">
+      <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-line py-3 text-xs font-medium text-ink-soft transition hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-violet-300">
         Manage inventory
         <ArrowUpRight size={14} />
       </button>

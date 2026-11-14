@@ -107,7 +107,7 @@ const getStatusClasses = (status) => {
       return "border-red-500/20 bg-red-500/10 text-red-400";
 
     default:
-      return "border-white/10 bg-white/5 text-muted";
+      return "border-line bg-surface text-muted";
   }
 };
 
@@ -124,7 +124,7 @@ const getExpiryClasses = (status) => {
       return "bg-red-500/10 text-red-400";
 
     default:
-      return "bg-white/5 text-muted";
+      return "bg-surface text-muted";
   }
 };
 
@@ -379,7 +379,7 @@ export default function InventoryPageContent() {
           <button
             onClick={exportCSV}
             disabled={filteredMedicines.length === 0 || isLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-foreground transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-3 text-sm font-medium text-foreground transition hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Download size={17} />
             Export CSV
@@ -388,7 +388,7 @@ export default function InventoryPageContent() {
           <button
             onClick={() => setModalOpen(true)}
             disabled={!pharmacyLoaded}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-ink shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus size={18} />
             Add Medicine
@@ -484,14 +484,14 @@ export default function InventoryPageContent() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search medicine, SKU, batch..."
-              className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-11 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-blue-500"
+              className="w-full rounded-xl border border-line bg-surface py-3 pl-11 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-blue-500"
             />
           </div>
 
           <select
             value={category}
             onChange={(event) => setCategory(event.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-[#111827] px-4 py-3 text-sm text-foreground outline-none focus:border-blue-500"
+            className="w-full rounded-xl border border-line bg-elevated px-4 py-3 text-sm text-foreground outline-none focus:border-blue-500"
           >
             <option value="All Categories">All Categories</option>
 
@@ -505,7 +505,7 @@ export default function InventoryPageContent() {
           <select
             value={stockFilter}
             onChange={(event) => setStockFilter(event.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-[#111827] px-4 py-3 text-sm text-foreground outline-none focus:border-blue-500"
+            className="w-full rounded-xl border border-line bg-elevated px-4 py-3 text-sm text-foreground outline-none focus:border-blue-500"
           >
             <option value="All Stock">All Stock Statuses</option>
             <option value="In Stock">In Stock</option>
@@ -535,7 +535,7 @@ export default function InventoryPageContent() {
 
       {/* Medicine table */}
       <div className="glass-card overflow-hidden rounded-2xl">
-        <div className="flex flex-col gap-2 border-b border-white/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 border-b border-line p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-semibold text-foreground">
               Medicine Inventory
@@ -546,7 +546,7 @@ export default function InventoryPageContent() {
             </p>
           </div>
 
-          <span className="w-fit rounded-lg bg-white/5 px-3 py-1.5 text-xs text-muted">
+          <span className="w-fit rounded-lg bg-surface px-3 py-1.5 text-xs text-muted">
             {filteredMedicines.length} medicines
           </span>
         </div>
@@ -555,7 +555,7 @@ export default function InventoryPageContent() {
           <LoadingRows />
         ) : filteredMedicines.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
-            <div className="rounded-2xl bg-white/5 p-4 text-muted">
+            <div className="rounded-2xl bg-surface p-4 text-muted">
               <Pill size={30} />
             </div>
 
@@ -579,7 +579,7 @@ export default function InventoryPageContent() {
           <>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[850px] text-left text-sm">
-                <thead className="bg-white/[0.02] text-xs uppercase text-muted">
+                <thead className="bg-surface-soft text-xs uppercase text-muted">
                   <tr>
                     <th className="px-5 py-4 font-medium">Medicine</th>
                     <th className="px-5 py-4 font-medium">Category</th>
@@ -593,7 +593,7 @@ export default function InventoryPageContent() {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-line">
                   {paginatedMedicines.map((medicine) => {
                     const quantity = getStock(medicine);
                     const status = getStockStatus(medicine);
@@ -601,7 +601,7 @@ export default function InventoryPageContent() {
 
                     return (
                       <Fragment key={medicine.id}>
-                        <tr className="transition hover:bg-white/[0.02]">
+                        <tr className="transition hover:bg-hover">
                           {/* Medicine name */}
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-3">
@@ -669,7 +669,7 @@ export default function InventoryPageContent() {
                               <Link
                                 href={`/inventory/${medicine.id}`}
                                 title="View medicine details"
-                                className="rounded-lg border border-white/10 p-2 text-muted transition hover:border-blue-500/30 hover:bg-blue-500/10 hover:text-blue-400"
+                                className="rounded-lg border border-line p-2 text-muted transition hover:border-blue-500/30 hover:bg-blue-500/10 hover:text-blue-400"
                               >
                                 <Eye size={16} />
                               </Link>
@@ -679,7 +679,7 @@ export default function InventoryPageContent() {
                                   toggleExpanded(medicine.id)
                                 }
                                 title="View batches"
-                                className="rounded-lg border border-white/10 p-2 text-muted transition hover:bg-white/10 hover:text-foreground"
+                                className="rounded-lg border border-line p-2 text-muted transition hover:bg-hover hover:text-foreground"
                               >
                                 {isExpanded ? (
                                   <ChevronUp size={16} />
@@ -696,7 +696,7 @@ export default function InventoryPageContent() {
                           <tr>
                             <td
                               colSpan={7}
-                              className="bg-white/[0.015] px-5 py-5"
+                              className="bg-surface-soft px-5 py-5"
                             >
                               <div className="space-y-3">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -736,7 +736,7 @@ export default function InventoryPageContent() {
                                         </tr>
                                       </thead>
 
-                                      <tbody className="divide-y divide-white/5">
+                                      <tbody className="divide-y divide-line">
                                         {(medicine.batches || []).map(
                                           (batch, index) => {
                                             const expiryStatus = today
@@ -804,7 +804,7 @@ export default function InventoryPageContent() {
             </div>
 
             {/* Pagination */}
-            <div className="flex flex-col gap-3 border-t border-white/5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 border-t border-line px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-muted">
                 Showing{" "}
                 {(currentPage - 1) * PAGE_SIZE + 1}
@@ -822,7 +822,7 @@ export default function InventoryPageContent() {
                     setCurrentPage((page) => Math.max(1, page - 1))
                   }
                   disabled={currentPage === 1}
-                  className="rounded-lg border border-white/10 p-2 text-muted transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-30"
+                  className="rounded-lg border border-line p-2 text-muted transition hover:bg-hover disabled:cursor-not-allowed disabled:opacity-30"
                   aria-label="Previous page"
                 >
                   <ChevronLeft size={17} />
@@ -839,7 +839,7 @@ export default function InventoryPageContent() {
                     )
                   }
                   disabled={currentPage === totalPages}
-                  className="rounded-lg border border-white/10 p-2 text-muted transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-30"
+                  className="rounded-lg border border-line p-2 text-muted transition hover:bg-hover disabled:cursor-not-allowed disabled:opacity-30"
                   aria-label="Next page"
                 >
                   <ChevronRight size={17} />
@@ -901,15 +901,15 @@ function LoadingRows() {
           key={index}
           className="flex animate-pulse items-center gap-4"
         >
-          <div className="h-10 w-10 rounded-xl bg-white/10" />
+          <div className="h-10 w-10 rounded-xl bg-surface-strong" />
 
           <div className="flex-1 space-y-2">
-            <div className="h-3 w-40 rounded bg-white/10" />
-            <div className="h-2.5 w-24 rounded bg-white/5" />
+            <div className="h-3 w-40 rounded bg-surface-strong" />
+            <div className="h-2.5 w-24 rounded bg-surface" />
           </div>
 
-          <div className="hidden h-8 w-20 rounded-lg bg-white/5 sm:block" />
-          <div className="hidden h-8 w-20 rounded-lg bg-white/5 md:block" />
+          <div className="hidden h-8 w-20 rounded-lg bg-surface sm:block" />
+          <div className="hidden h-8 w-20 rounded-lg bg-surface md:block" />
         </div>
       ))}
     </div>
