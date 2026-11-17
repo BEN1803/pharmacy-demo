@@ -1,0 +1,2 @@
+OutlineSection(name='Test Section', level=0, page_number=3, dest=DestinationXYZ(page_number=3, top=813.5435433070866, left=0, zoom="null", page_ref=None), struct_elem=None)
+OutlineSection(name='Sub', level=1, page_number=3, dest=DestinationXYZ(page_number=3, top=785.1970866141733, left=0, zoom="null", page_ref=None), struct_elem=None)
